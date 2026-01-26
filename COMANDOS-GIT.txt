@@ -1,0 +1,31 @@
+# ========================================
+# COMANDOS GIT - COPIE E COLE NO GIT BASH
+# ========================================
+
+# 1. Adicionar arquivos deletados e modificados
+git add -A
+
+# 2. Verificar o que será commitado
+git status
+
+# 3. Fazer commit
+git commit -m "Aula 02: Segurança - Variáveis de ambiente e proteção de credenciais"
+
+# 4. Fazer push para o GitHub
+git push origin main
+
+# ========================================
+# VERIFICAÇÕES APÓS O PUSH
+# ========================================
+
+# Ver histórico (deve ter apenas 2 commits)
+git log --oneline
+
+# Confirmar que .env NÃO está no Git
+git ls-files | grep ".env"
+# Resultado esperado: apenas .env.example
+
+# ========================================
+# PRONTO! ✅
+# ========================================
+# Acesse: https://github.com/guilermefalcao/screenmatch-sem-web_Spring-Data-JPA

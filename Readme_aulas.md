@@ -126,10 +126,16 @@ spring.jpa.hibernate.ddl-auto=update  # Cria/atualiza tabelas automaticamente
 spring.jpa.show-sql=true              # Mostra SQL no console
 ```
 
+**Tipos de Bancos de Dados:**
+- **Relacionais (SQL):** PostgreSQL, MySQL, Oracle - Dados estruturados em tabelas com relacionamentos
+- **NoSQL:** MongoDB (documentos), Redis (chave-valor), Cassandra (colunas) - Dados não estruturados
+- **Por que PostgreSQL?** Open source, robusto, suporta JSON, ótimo para aplicações Spring
+
 **Conceitos aprendidos:**
 - Configuração de DataSource
 - Hibernate DDL (create, update, validate)
 - Dialetos SQL
+- Diferença entre bancos relacionais e NoSQL
 
 ---
 
@@ -320,6 +326,112 @@ SELECT COUNT(*) FROM series;
 
 ---
 
+### 7. Segurança: Variáveis de Ambiente
+**Arquivos:** `.env`, `.env.example`, `.gitignore`
+
+**O que faz:** Protege credenciais sensíveis (senhas, API keys)
+
+**Problema:** Credenciais hardcoded no código são expostas no Git
+```java
+// ❌ INSEGURO
+private final String API_KEY = "&apikey=6585022c";
+```
+
+**Solução:** Usar variáveis de ambiente
+```java
+// ✅ SEGURO
+private final String API_KEY = "&apikey=" + System.getenv("OMDB_API_KEY");
+```
+
+**Passos:**
+1. Criar arquivo `.env` com credenciais reais (NÃO sobe no Git)
+```properties
+OMDB_API_KEY=6585022c
+DB_URL=jdbc:postgresql://localhost:5433/alura_series
+DB_USERNAME=postgres
+DB_PASSWORD=1234
+```
+
+2. Criar `.env.example` como template público (sobe no Git)
+```properties
+OMDB_API_KEY=sua-chave-aqui
+DB_PASSWORD=sua-senha-aqui
+```
+
+3. Adicionar `.env` no `.gitignore`
+```
+.env
+.env.local
+*.env
+```
+
+4. Usar variáveis no `application.properties`
+```properties
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5433/alura_series}
+spring.datasource.username=${DB_USERNAME:postgres}
+spring.datasource.password=${DB_PASSWORD:1234}
+```
+
+5. Usar variáveis no código Java
+```java
+private final String API_KEY = "&apikey=" + System.getenv("OMDB_API_KEY");
+```
+
+**Sintaxe Spring:**
+- `${VARIAVEL:valor_padrao}` - Busca variável de ambiente, se não encontrar usa valor padrão
+
+**O que proteger:**
+- ✅ API Keys (OMDB, OpenAI, AWS)
+- ✅ Senhas de banco de dados
+- ✅ Tokens de autenticação
+- ✅ Chaves de criptografia
+- ✅ Credenciais SMTP
+
+**Conceitos aprendidos:**
+- Variáveis de ambiente
+- System.getenv()
+- Segurança de credenciais
+- .gitignore
+- Boas práticas de segurança
+
+---
+
+## 📋 Resumo da Aula 02
+
+### ✅ O que você aprendeu:
+
+1. **Configurar ambiente PostgreSQL**
+   - Instalação do banco de dados
+   - Diferença entre bancos relacionais e NoSQL
+   - Criação do banco `alura_series`
+
+2. **Preparar aplicação para banco de dados**
+   - Adicionar dependências JPA e PostgreSQL no `pom.xml`
+   - Configurar `application.properties`
+
+3. **Mapear entidades com Hibernate**
+   - Anotações: @Entity, @Table, @Id, @GeneratedValue
+   - @Column, @Enumerated, @Transient
+   - Construtor padrão obrigatório
+
+4. **Trabalhar com Repository**
+   - Interface JpaRepository
+   - Métodos CRUD automáticos
+   - save(), findAll(), findById(), delete()
+
+5. **Injeção de dependências**
+   - @Autowired
+   - Inversão de controle (IoC)
+   - Classes gerenciadas pelo Spring
+
+6. **Variáveis de ambiente**
+   - Proteger credenciais sensíveis
+   - Arquivo .env (não sobe no Git)
+   - System.getenv() e ${VARIAVEL}
+   - .gitignore para segurança
+
+---
+
 ## 📝 Próximas Aulas
 
 - [ ] Consultas personalizadas com JPQL
@@ -332,4 +444,4 @@ SELECT COUNT(*) FROM series;
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Persistência de Dados
+**Última atualização:** Aula 02 - Persistência de Dados e Segurança

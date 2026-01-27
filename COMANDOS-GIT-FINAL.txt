@@ -1,0 +1,28 @@
+# ========================================
+# COMANDOS GIT - AULA 02 COMPLETA
+# ========================================
+
+# 1. Navegar para o diretório correto
+cd "/c/1. Guilherme/00. Dataprev/0000. projeto conta/cursoSpringboot/3355-java-screenmatch-com-jpa"
+
+# 2. Ver status
+git status
+
+# 3. Adicionar todos os arquivos
+git add .
+
+# 4. Fazer commit
+git commit -m "Aula 02 Completa: Relacionamento @OneToMany/@ManyToOne - Série e Episódios com persistência em cascata"
+
+# 5. Fazer push
+git push origin main
+
+# ========================================
+# ARQUIVOS MODIFICADOS/CRIADOS
+# ========================================
+# ✅ Serie.java - Relacionamento @OneToMany
+# ✅ Episodio.java - Relacionamento @ManyToOne + @Entity
+# ✅ Principal.java - Método buscarEpisodioPorSerie() com verificação de duplicação
+# ✅ application.properties - show-sql=false
+# ✅ README.md - Atualizado
+# ✅ Readme_aulas.md - Seção relacionamentos adicionada

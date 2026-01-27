@@ -38,6 +38,9 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Persistência automática de dados no banco
 - ✅ Variáveis de ambiente para proteção de credenciais (.env)
 - ✅ Exercícios práticos JPA (Produto, Categoria, Pedido)
+- ✅ Relacionamentos JPA (@OneToMany e @ManyToOne)
+- ✅ Persistência em cascata (cascade = CascadeType.ALL)
+- ✅ Busca e salvamento de episódios com relacionamento bidirecional
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -143,6 +146,10 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - Injeção de dependência (@Autowired)
 - Variáveis de ambiente para segurança
 - Persistência automática de dados
+- Relacionamentos JPA (@OneToMany e @ManyToOne)
+- Chaves estrangeiras (Foreign Keys)
+- Persistência em cascata (cascade)
+- Fetch types (EAGER vs LAZY)
 
 ## 🔗 Links Úteis
 
@@ -164,4 +171,4 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Persistência de Dados e Exercícios JPA
+**Última atualização:** Aula 02 - Relacionamentos JPA (@OneToMany/@ManyToOne)

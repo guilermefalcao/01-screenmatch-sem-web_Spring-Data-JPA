@@ -594,6 +594,150 @@ SELECT * FROM pedidos;
 
 ---
 
+### 9. Relacionamentos JPA: @OneToMany e @ManyToOne
+**Arquivos:** `model/Serie.java`, `model/Episodio.java`, `principal/Principal.java`
+
+**O que faz:** Cria relacionamento bidirecional entre Série e Episódios
+
+**Relacionamento:**
+- UMA série tem MUITOS episódios (@OneToMany)
+- MUITOS episódios pertencem a UMA série (@ManyToOne)
+
+**Passos:**
+
+1. **Transformar Episodio em entidade JPA:**
+```java
+@Entity
+@Table(name = "episodios")
+public class Episodio {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private Integer temporada;
+    private String titulo;
+    private Integer numeroEpisodio;
+    private Double avaliacao;
+    private LocalDate dataLancamento;
+    
+    // @ManyToOne: MUITOS episódios pertencem a UMA série
+    // Cria coluna "serie_id" na tabela episodios (chave estrangeira)
+    @ManyToOne
+    private Serie serie;
+    
+    // Construtor padrão obrigatório para JPA
+    public Episodio() {}
+}
+```
+
+2. **Adicionar relacionamento em Serie:**
+```java
+@Entity
+@Table(name = "series")
+public class Serie {
+    // ... outros atributos
+    
+    // @OneToMany: UMA série tem MUITOS episódios
+    // mappedBy = "serie": Relacionamento mapeado pelo atributo "serie" em Episodio
+    // cascade = CascadeType.ALL: Operações na série afetam episódios (salvar, deletar)
+    // fetch = FetchType.EAGER: Carrega episódios IMEDIATAMENTE junto com a série
+    @OneToMany(mappedBy = "serie", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<Episodio> episodios = new ArrayList<>();
+}
+```
+
+3. **Criar método para buscar e salvar episódios:**
+```java
+private void buscarEpisodioPorSerie() {
+    // 1. Lista séries do banco
+    ListarSeriesBuscadas();
+    
+    // 2. Busca série escolhida
+    Optional<Serie> serieBuscada = series.stream()
+        .filter(s -> s.getTitulo().toLowerCase().contains(nomeSerie.toLowerCase()))
+        .findFirst();
+    
+    // 3. Verifica se já tem episódios (evita duplicação)
+    if (!serieEncontrada.getEpisodios().isEmpty()) {
+        System.out.println("⚠️  Esta série já possui episódios salvos.");
+        // Pergunta se deseja substituir
+    }
+    
+    // 4. Busca episódios na API OMDB
+    for (int i = 1; i <= serieEncontrada.getTotalTemporadas(); i++) {
+        // Busca cada temporada
+    }
+    
+    // 5. Converte para objetos Episodio
+    List<Episodio> episodios = temporadas.stream()
+        .filter(t -> t.episodios() != null)
+        .flatMap(d -> d.episodios().stream()
+            .map(e -> new Episodio(d.numero(), e)))
+        .collect(Collectors.toList());
+    
+    // 6. Associa cada episódio à série (IMPORTANTE!)
+    episodios.forEach(e -> e.setSerie(serieEncontrada));
+    
+    // 7. Define lista de episódios na série
+    serieEncontrada.setEpisodios(episodios);
+    
+    // 8. Salva série (cascade salva episódios automaticamente)
+    repositorio.save(serieEncontrada);
+}
+```
+
+**Estrutura no banco:**
+```
+Tabela: series
+- id (PK)
+- titulo
+- total_temporadas
+- ...
+
+Tabela: episodios
+- id (PK)
+- temporada
+- titulo
+- numero_episodio
+- avaliacao
+- data_lancamento
+- serie_id (FK) → series.id
+```
+
+**Verificar no DBeaver:**
+```sql
+-- Ver episódios com série
+SELECT 
+    s.titulo AS serie,
+    e.temporada,
+    e.numero_episodio,
+    e.titulo AS episodio,
+    e.avaliacao
+FROM series s
+JOIN episodios e ON s.id = e.serie_id
+WHERE s.titulo = 'The Boys'
+ORDER BY e.temporada, e.numero_episodio;
+
+-- Contar episódios por série
+SELECT 
+    s.titulo,
+    COUNT(e.id) AS total_episodios
+FROM series s
+LEFT JOIN episodios e ON s.id = e.serie_id
+GROUP BY s.titulo;
+```
+
+**Conceitos aprendidos:**
+- Relacionamento bidirecional (@OneToMany + @ManyToOne)
+- Chave estrangeira (Foreign Key)
+- cascade = CascadeType.ALL (persistência em cascata)
+- fetch = FetchType.EAGER vs LAZY
+- mappedBy (lado não-dono do relacionamento)
+- Evitar duplicação de dados
+- JOIN entre tabelas
+
+---
+
 ## 📝 Próximas Aulas
 
 - [ ] Consultas personalizadas com JPQL
@@ -606,4 +750,4 @@ SELECT * FROM pedidos;
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Persistência de Dados, Segurança e Exercícios JPA
+**Última atualização:** Aula 02 - Relacionamentos JPA (@OneToMany/@ManyToOne)

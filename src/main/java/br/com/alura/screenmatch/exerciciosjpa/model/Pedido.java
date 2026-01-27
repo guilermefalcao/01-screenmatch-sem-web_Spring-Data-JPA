@@ -2,6 +2,8 @@ package br.com.alura.screenmatch.exerciciosjpa.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 // EXERCÍCIO 5: Classe Pedido como entidade JPA
 @Entity
@@ -14,6 +16,16 @@ public class Pedido {
     
     @Column(nullable = false)
     private LocalDate data;
+    
+    // ========================================
+    // EXERCÍCIO EXTRA: RELACIONAMENTO MUITOS-PARA-MUITOS (lado inverso)
+    // ========================================
+    // @ManyToMany: MUITOS pedidos podem ter MUITOS produtos
+    // mappedBy = "pedidos": Relacionamento mapeado pelo atributo "pedidos" em Produto
+    // fetch = FetchType.EAGER: Carrega produtos IMEDIATAMENTE
+    // Produto é o dono do relacionamento (tem @JoinTable)
+    @ManyToMany(mappedBy = "pedidos", fetch = FetchType.EAGER)
+    private List<Produto> produtos = new ArrayList<>();
     
     // Construtor padrão (obrigatório para JPA)
     public Pedido() {}
@@ -32,8 +44,18 @@ public class Pedido {
         return data;
     }
     
+    public List<Produto> getProdutos() {
+        return produtos;
+    }
+    
+    // Método auxiliar para adicionar produto ao pedido
+    public void adicionarProduto(Produto produto) {
+        this.produtos.add(produto);
+        produto.getPedidos().add(this);  // Mantém relacionamento bidirecional
+    }
+    
     @Override
     public String toString() {
-        return "Pedido{id=" + id + ", data=" + data + "}";
+        return "Pedido{id=" + id + ", data=" + data + ", produtos=" + produtos.size() + "}";
     }
 }

@@ -163,6 +163,13 @@ public class Serie {
     }
 
     public void setEpisodios(List<Episodio> episodios) {
+        // IMPORTANTE: Manipula a chave estrangeira no relacionamento bidirecional
+        // Para cada episódio na lista, define a série atual (this) como sua série
+        // Isso garante que o campo "serie_id" seja preenchido corretamente na tabela episodios
+        // Sem isso, os episódios seriam salvos com serie_id = NULL
+        episodios.forEach(e -> e.setSerie(this));
+        
+        // Atribui a lista de episódios ao atributo da classe
         this.episodios = episodios;
     }
 
@@ -175,6 +182,8 @@ public class Serie {
                 ", avaliacao=" + avaliacao +
                 ", atores='" + atores + '\'' +
                 ", poster='" + poster + '\'' +
-                ", sinopse='" + sinopse + '\'';
+                ", sinopse='" + sinopse + '\''+
+                ", episodios='" + episodios + '\'';
+                
     }
 }

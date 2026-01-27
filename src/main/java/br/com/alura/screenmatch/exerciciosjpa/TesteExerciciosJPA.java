@@ -1,9 +1,11 @@
 package br.com.alura.screenmatch.exerciciosjpa;
 
 import br.com.alura.screenmatch.exerciciosjpa.model.Categoria;
+import br.com.alura.screenmatch.exerciciosjpa.model.Fornecedor;
 import br.com.alura.screenmatch.exerciciosjpa.model.Pedido;
 import br.com.alura.screenmatch.exerciciosjpa.model.Produto;
 import br.com.alura.screenmatch.exerciciosjpa.repository.CategoriaRepository;
+import br.com.alura.screenmatch.exerciciosjpa.repository.FornecedorRepository;
 import br.com.alura.screenmatch.exerciciosjpa.repository.PedidoRepository;
 import br.com.alura.screenmatch.exerciciosjpa.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,13 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-// EXERCÍCIO 8: Classe para testar salvamento de dados
-// @Component: Marca como componente gerenciado pelo Spring (permite injeção de dependência)
 @Component
 public class TesteExerciciosJPA {
     
-    // PASSO IMPORTANTE: Injeção de dependência dos repositórios
-    // @Autowired: Spring injeta automaticamente os repositórios
     @Autowired
     private ProdutoRepository produtoRepository;
     
@@ -27,42 +25,80 @@ public class TesteExerciciosJPA {
     @Autowired
     private PedidoRepository pedidoRepository;
     
-    // Método para executar os testes
+    @Autowired
+    private FornecedorRepository fornecedorRepository;
+    
     public void executar() {
         System.out.println("\n========================================");
-        System.out.println("EXERCÍCIOS JPA - TESTANDO PERSISTÊNCIA");
+        System.out.println("EXERCÍCIOS JPA - RELACIONAMENTOS");
         System.out.println("========================================\n");
         
-        // Criar e salvar Produto
-        Produto produto = new Produto("Notebook Dell", 3500.00);
-        produtoRepository.save(produto);
-        System.out.println("✅ Produto salvo: " + produto);
+        // Limpar dados anteriores
+        pedidoRepository.deleteAll();
+        categoriaRepository.deleteAll();
+        fornecedorRepository.deleteAll();
+        System.out.println("🗑️  Dados anteriores removidos\n");
         
-        // Criar e salvar Categoria
-        Categoria categoria = new Categoria("Eletrônicos");
-        categoriaRepository.save(categoria);
-        System.out.println("✅ Categoria salva: " + categoria);
+        // EXERCÍCIO 4: Criar Fornecedor
+        Fornecedor fornecedor1 = new Fornecedor("Dell Inc.");
+        Fornecedor fornecedor2 = new Fornecedor("Samsung Electronics");
+        fornecedorRepository.save(fornecedor1);
+        fornecedorRepository.save(fornecedor2);
+        System.out.println("✅ Fornecedores salvos");
         
-        // Criar e salvar Pedido
-        Pedido pedido = new Pedido(LocalDate.now());
-        pedidoRepository.save(pedido);
-        System.out.println("✅ Pedido salvo: " + pedido);
+        // EXERCÍCIO 1 e 2: Categoria com Produtos (1:N bidirecional)
+        Categoria eletronicos = new Categoria("Eletrônicos");
+        Categoria informatica = new Categoria("Informática");
+        
+        Produto notebook = new Produto("Notebook Dell Inspiron", 3500.00);
+        Produto mouse = new Produto("Mouse Logitech", 150.00);
+        Produto monitor = new Produto("Monitor Samsung 24\"", 800.00);
+        
+        // EXERCÍCIO 5 e 6: Associar Fornecedor a Produto
+        notebook.setFornecedor(fornecedor1);
+        mouse.setFornecedor(fornecedor1);
+        monitor.setFornecedor(fornecedor2);
+        
+        // Associar produtos à categoria
+        eletronicos.adicionarProduto(notebook);
+        eletronicos.adicionarProduto(monitor);
+        informatica.adicionarProduto(mouse);
+        
+        // Salvar categoria (cascade salva produtos)
+        categoriaRepository.save(eletronicos);
+        categoriaRepository.save(informatica);
+        System.out.println("✅ Categorias e Produtos salvos (cascade)");
+        
+        // EXERCÍCIO EXTRA: Pedido com Produtos (N:M)
+        Pedido pedido1 = new Pedido(LocalDate.now());
+        Pedido pedido2 = new Pedido(LocalDate.now().minusDays(1));
+        
+        pedido1.adicionarProduto(notebook);
+        pedido1.adicionarProduto(mouse);
+        pedido2.adicionarProduto(monitor);
+        
+        pedidoRepository.save(pedido1);
+        pedidoRepository.save(pedido2);
+        System.out.println("✅ Pedidos salvos com produtos associados");
         
         System.out.println("\n========================================");
-        System.out.println("LISTANDO TODOS OS DADOS DO BANCO");
+        System.out.println("LISTANDO DADOS COM RELACIONAMENTOS");
         System.out.println("========================================\n");
         
-        // Listar todos os produtos
-        System.out.println("📦 PRODUTOS:");
-        produtoRepository.findAll().forEach(System.out::println);
+        System.out.println("📂 CATEGORIAS COM PRODUTOS:");
+        categoriaRepository.findAll().forEach(c -> {
+            System.out.println(c);
+            c.getProdutos().forEach(p -> System.out.println("  └─ " + p));
+        });
         
-        // Listar todas as categorias
-        System.out.println("\n📂 CATEGORIAS:");
-        categoriaRepository.findAll().forEach(System.out::println);
+        System.out.println("\n🛒 PEDIDOS COM PRODUTOS:");
+        pedidoRepository.findAll().forEach(p -> {
+            System.out.println(p);
+            p.getProdutos().forEach(prod -> System.out.println("  └─ " + prod));
+        });
         
-        // Listar todos os pedidos
-        System.out.println("\n🛒 PEDIDOS:");
-        pedidoRepository.findAll().forEach(System.out::println);
+        System.out.println("\n🏭 FORNECEDORES:");
+        fornecedorRepository.findAll().forEach(System.out::println);
         
         System.out.println("\n========================================");
         System.out.println("✅ TESTES CONCLUÍDOS COM SUCESSO!");

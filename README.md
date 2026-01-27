@@ -41,6 +41,11 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Relacionamentos JPA (@OneToMany e @ManyToOne)
 - ✅ Persistência em cascata (cascade = CascadeType.ALL)
 - ✅ Busca e salvamento de episódios com relacionamento bidirecional
+- ✅ Relacionamento @OneToMany bidirecional (Categoria-Produto)
+- ✅ Relacionamento @ManyToOne unidirecional (Produto-Fornecedor)
+- ✅ Relacionamento @ManyToMany com tabela intermediária (Produto-Pedido)
+- ✅ Fetch types (EAGER vs LAZY) e LazyInitializationException
+- ✅ Limpeza de dados com deleteAll() para evitar duplicação
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -146,10 +151,12 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - Injeção de dependência (@Autowired)
 - Variáveis de ambiente para segurança
 - Persistência automática de dados
-- Relacionamentos JPA (@OneToMany e @ManyToOne)
-- Chaves estrangeiras (Foreign Keys)
-- Persistência em cascata (cascade)
-- Fetch types (EAGER vs LAZY)
+- **Relacionamentos JPA (@OneToMany e @ManyToOne)**
+- **Chaves estrangeiras (Foreign Keys)**
+- **Persistência em cascata (cascade = CascadeType.ALL)**
+- **Fetch types (EAGER vs LAZY)**
+- **Relacionamentos bidirecionais (mappedBy)**
+- **Relacionamento N:M com @ManyToMany e @JoinTable**
 
 ## 🔗 Links Úteis
 
@@ -171,4 +178,4 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Relacionamentos JPA (@OneToMany/@ManyToOne)
+**Última atualização:** Aula 02 - Relacionamentos JPA Completos (@OneToMany/@ManyToOne/@ManyToMany)

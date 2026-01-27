@@ -27,8 +27,8 @@ public class Principal {
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
 
     // 🔒 SEGURANÇA: API Key agora vem da variável de ambiente OMDB_API_KEY
-    // Se a variável não existir, usa uma string vazia (evita erro de compilação)
-    private final String API_KEY = "&apikey=" + (System.getenv("OMDB_API_KEY") != null ? System.getenv("OMDB_API_KEY") : "6585022c");
+    // Se a variável não existir, usa uma string vazia (força o usuário a configurar)
+    private final String API_KEY = "&apikey=" + (System.getenv("OMDB_API_KEY") != null ? System.getenv("OMDB_API_KEY") : "");
 
     private List<DadosSerie> dadosSeries = new ArrayList<>();
     private List<Episodio> episodios = new ArrayList<>();

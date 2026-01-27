@@ -643,6 +643,12 @@ public class Serie {
     // fetch = FetchType.EAGER: Carrega episódios IMEDIATAMENTE junto com a série
     @OneToMany(mappedBy = "serie", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<Episodio> episodios = new ArrayList<>();
+    
+    // Setter com manipulação de chave estrangeira
+    public void setEpisodios(List<Episodio> episodios) {
+        episodios.forEach(e -> e.setSerie(this));  // Associa série a cada episódio
+        this.episodios = episodios;
+    }
 }
 ```
 
@@ -668,20 +674,17 @@ private void buscarEpisodioPorSerie() {
         // Busca cada temporada
     }
     
-    // 5. Converte para objetos Episodio
+    // 5. Converte para objetos Episodio (filtra dados nulos da API)
     List<Episodio> episodios = temporadas.stream()
-        .filter(t -> t.episodios() != null)
+        .filter(t -> t.episodios() != null)  // Filtra temporadas inválidas
         .flatMap(d -> d.episodios().stream()
             .map(e -> new Episodio(d.numero(), e)))
         .collect(Collectors.toList());
     
-    // 6. Associa cada episódio à série (IMPORTANTE!)
-    episodios.forEach(e -> e.setSerie(serieEncontrada));
-    
-    // 7. Define lista de episódios na série
+    // 6. Define lista de episódios na série (setter associa automaticamente)
     serieEncontrada.setEpisodios(episodios);
     
-    // 8. Salva série (cascade salva episódios automaticamente)
+    // 7. Salva série (cascade salva episódios automaticamente)
     repositorio.save(serieEncontrada);
 }
 ```
@@ -733,8 +736,249 @@ GROUP BY s.titulo;
 - cascade = CascadeType.ALL (persistência em cascata)
 - fetch = FetchType.EAGER vs LAZY
 - mappedBy (lado não-dono do relacionamento)
+- Manipulação de chave estrangeira no setter
 - Evitar duplicação de dados
+- Filtrar dados nulos da API
 - JOIN entre tabelas
+
+---
+
+### 10. Exercícios Avançados: Relacionamentos JPA
+**Pasta:** `exerciciosjpa/`
+
+**O que faz:** Implementa 3 tipos de relacionamentos entre entidades
+
+**Relacionamentos implementados:**
+
+#### 1. @OneToMany Bidirecional (Categoria → Produto)
+**Categoria.java:**
+```java
+@Entity
+@Table(name = "categorias")
+public class Categoria {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String nome;
+    
+    // UMA categoria tem MUITOS produtos
+    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, 
+               fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<Produto> produtos = new ArrayList<>();
+    
+    // Método auxiliar para manter relacionamento bidirecional
+    public void adicionarProduto(Produto produto) {
+        produtos.add(produto);
+        produto.setCategoria(this);  // Associa categoria ao produto
+    }
+}
+```
+
+**Produto.java:**
+```java
+@Entity
+@Table(name = "produtos")
+public class Produto {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false)
+    private String nome;
+    
+    @Column(name = "valor")
+    private Double preco;
+    
+    // MUITOS produtos pertencem a UMA categoria
+    @ManyToOne
+    private Categoria categoria;
+}
+```
+
+**Resultado no banco:**
+- Tabela `produtos` ganha coluna `categoria_id` (FK → categorias.id)
+- Salvar Categoria com cascade salva todos os Produtos automaticamente
+
+---
+
+#### 2. @ManyToOne Unidirecional (Produto → Fornecedor)
+**Fornecedor.java:**
+```java
+@Entity
+@Table(name = "fornecedores")
+public class Fornecedor {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String nome;
+}
+```
+
+**Produto.java (adicionar):**
+```java
+@ManyToOne
+private Fornecedor fornecedor;  // MUITOS produtos de UM fornecedor
+```
+
+**Resultado no banco:**
+- Tabela `produtos` ganha coluna `fornecedor_id` (FK → fornecedores.id)
+- Relacionamento unidirecional: Produto conhece Fornecedor, mas Fornecedor não conhece Produtos
+
+---
+
+#### 3. @ManyToMany com Tabela Intermediária (Produto ↔ Pedido)
+**Produto.java (adicionar):**
+```java
+// MUITOS produtos em MUITOS pedidos
+@ManyToMany
+@JoinTable(
+    name = "pedido_produto",  // Nome da tabela intermediária
+    joinColumns = @JoinColumn(name = "produto_id"),  // FK para produtos
+    inverseJoinColumns = @JoinColumn(name = "pedido_id")  // FK para pedidos
+)
+private List<Pedido> pedidos = new ArrayList<>();
+```
+
+**Pedido.java:**
+```java
+@Entity
+@Table(name = "pedidos")
+public class Pedido {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private LocalDate data;
+    
+    // MUITOS pedidos têm MUITOS produtos
+    @ManyToMany(mappedBy = "pedidos", fetch = FetchType.EAGER)
+    private List<Produto> produtos = new ArrayList<>();
+    
+    // Método auxiliar para relacionamento bidirecional
+    public void adicionarProduto(Produto produto) {
+        this.produtos.add(produto);
+        produto.getPedidos().add(this);
+    }
+}
+```
+
+**Resultado no banco:**
+- Cria tabela intermediária `pedido_produto` com:
+  - `produto_id` (FK → produtos.id)
+  - `pedido_id` (FK → pedidos.id)
+  - Chave primária composta (produto_id, pedido_id)
+
+---
+
+**Teste completo (TesteExerciciosJPA.java):**
+```java
+@Component
+public class TesteExerciciosJPA {
+    @Autowired private ProdutoRepository produtoRepository;
+    @Autowired private CategoriaRepository categoriaRepository;
+    @Autowired private PedidoRepository pedidoRepository;
+    @Autowired private FornecedorRepository fornecedorRepository;
+    
+    public void executar() {
+        // Limpar dados anteriores (evita erro de constraint unique)
+        pedidoRepository.deleteAll();
+        categoriaRepository.deleteAll();
+        fornecedorRepository.deleteAll();
+        
+        // 1. Criar fornecedores
+        Fornecedor dell = new Fornecedor("Dell Inc.");
+        Fornecedor samsung = new Fornecedor("Samsung Electronics");
+        fornecedorRepository.save(dell);
+        fornecedorRepository.save(samsung);
+        
+        // 2. Criar categorias e produtos (1:N bidirecional)
+        Categoria eletronicos = new Categoria("Eletrônicos");
+        Produto notebook = new Produto("Notebook Dell Inspiron", 3500.00);
+        Produto monitor = new Produto("Monitor Samsung 24\"", 800.00);
+        
+        // 3. Associar fornecedor (N:1 unidirecional)
+        notebook.setFornecedor(dell);
+        monitor.setFornecedor(samsung);
+        
+        // 4. Associar categoria (método auxiliar mantém bidirecionalidade)
+        eletronicos.adicionarProduto(notebook);
+        eletronicos.adicionarProduto(monitor);
+        
+        // 5. Salvar categoria (cascade salva produtos)
+        categoriaRepository.save(eletronicos);
+        
+        // 6. Criar pedidos com produtos (N:M)
+        Pedido pedido1 = new Pedido(LocalDate.now());
+        pedido1.adicionarProduto(notebook);
+        pedido1.adicionarProduto(monitor);
+        pedidoRepository.save(pedido1);
+        
+        // 7. Listar dados com relacionamentos
+        categoriaRepository.findAll().forEach(c -> {
+            System.out.println(c);
+            c.getProdutos().forEach(p -> System.out.println("  └─ " + p));
+        });
+    }
+}
+```
+
+**Verificar no DBeaver:**
+```sql
+-- Ver produtos com todos os relacionamentos
+SELECT 
+    p.nome AS produto,
+    p.valor,
+    c.nome AS categoria,
+    f.nome AS fornecedor
+FROM produtos p
+LEFT JOIN categorias c ON p.categoria_id = c.id
+LEFT JOIN fornecedores f ON p.fornecedor_id = f.id;
+
+-- Ver tabela intermediária pedido_produto
+SELECT * FROM pedido_produto;
+
+-- Ver pedidos com produtos
+SELECT 
+    ped.id AS pedido,
+    ped.data,
+    p.nome AS produto,
+    p.valor
+FROM pedidos ped
+JOIN pedido_produto pp ON ped.id = pp.pedido_id
+JOIN produtos p ON pp.produto_id = p.produto_id
+ORDER BY ped.id;
+```
+
+**Conceitos aprendidos:**
+- @OneToMany bidirecional com cascade e orphanRemoval
+- @ManyToOne unidirecional (sem lista no lado "um")
+- @ManyToMany com @JoinTable
+- Métodos auxiliares para manter relacionamentos bidirecionais
+- fetch = FetchType.EAGER para evitar LazyInitializationException
+- deleteAll() para limpar dados e evitar constraint unique
+- Chave primária composta em tabela intermediária
+
+---
+
+## 📊 Resumo dos Relacionamentos JPA
+
+| Tipo | Anotação | Exemplo | Chave Estrangeira | Tabela Intermediária |
+|------|----------|---------|-------------------|----------------------|
+| 1:N Bidirecional | @OneToMany + @ManyToOne | Categoria → Produtos | No lado "muitos" (produtos.categoria_id) | Não |
+| N:1 Unidirecional | @ManyToOne | Produto → Fornecedor | No lado "muitos" (produtos.fornecedor_id) | Não |
+| N:M Bidirecional | @ManyToMany + @JoinTable | Produto ↔ Pedido | Não | Sim (pedido_produto) |
+| 1:1 | @OneToOne | Usuário → Perfil | Em qualquer lado | Não |
+
+**Atributos importantes:**
+- `mappedBy`: Indica lado não-dono do relacionamento bidirecional
+- `cascade`: Propaga operações (ALL, PERSIST, REMOVE, MERGE, REFRESH)
+- `fetch`: EAGER (carrega imediatamente) ou LAZY (carrega sob demanda)
+- `orphanRemoval`: Remove entidades órfãs (sem pai)
 
 ---
 
@@ -750,4 +994,4 @@ GROUP BY s.titulo;
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Relacionamentos JPA (@OneToMany/@ManyToOne)
+**Última atualização:** Aula 02 - Relacionamentos JPA Completos (@OneToMany/@ManyToOne/@ManyToMany)

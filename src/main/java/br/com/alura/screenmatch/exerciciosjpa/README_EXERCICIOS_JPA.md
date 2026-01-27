@@ -190,41 +190,103 @@ public class TesteExerciciosJPA {
 
 ```
 ========================================
-EXERCÍCIOS JPA - TESTANDO PERSISTÊNCIA
+EXERCÍCIOS JPA - RELACIONAMENTOS
 ========================================
 
-✅ Produto salvo: Produto{id=1, nome='Notebook Dell', preco=3500.0}
-✅ Categoria salva: Categoria{id=1, nome='Eletrônicos'}
-✅ Pedido salvo: Pedido{id=1, data=2024-01-15}
+🗑️  Dados anteriores removidos
+
+✅ Fornecedores salvos
+✅ Categorias e Produtos salvos (cascade)
+✅ Pedidos salvos com produtos associados
+
+========================================
+LISTANDO DADOS COM RELACIONAMENTOS
+========================================
+
+📂 CATEGORIAS COM PRODUTOS:
+Categoria{id=5, nome='Eletrônicos', produtos=2}
+  └─ Produto{id=6, nome='Notebook Dell Inspiron', preco=3500.0}
+  └─ Produto{id=7, nome='Monitor Samsung 24"', preco=800.0}
+
+🛒 PEDIDOS COM PRODUTOS:
+Pedido{id=4, data=2026-01-27, produtos=2}
+  └─ Produto{id=6, nome='Notebook Dell Inspiron'}
+
+✅ TESTES CONCLUÍDOS COM SUCESSO!
 ```
 
 ---
 
 ### Opção 2: Verificar no DBeaver
 
+#### Consultas Básicas:
 ```sql
--- Ver produtos
-SELECT * FROM produtos;
-
--- Ver categorias
+-- Ver todas as categorias
 SELECT * FROM categorias;
 
--- Ver pedidos
+-- Ver todos os produtos com relacionamentos
+SELECT p.id, p.nome, p.valor, c.nome as categoria, f.nome as fornecedor
+FROM produtos p
+LEFT JOIN categorias c ON p.categoria_id = c.id
+LEFT JOIN fornecedores f ON p.fornecedor_id = f.id;
+
+-- Ver todos os pedidos
 SELECT * FROM pedidos;
 
--- Ver estrutura da tabela produtos
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_name = 'produtos';
+-- Ver fornecedores
+SELECT * FROM fornecedores;
 ```
 
-**Resultado esperado:**
+#### Consultas de Relacionamentos:
+```sql
+-- Ver tabela intermediária pedido_produto (N:M)
+SELECT * FROM pedido_produto;
+
+-- Ver pedidos com seus produtos
+SELECT ped.id as pedido_id, ped.data, p.nome as produto, p.valor
+FROM pedidos ped
+JOIN pedido_produto pp ON ped.id = pp.pedido_id
+JOIN produtos p ON pp.produto_id = p.id
+ORDER BY ped.id;
+
+-- Ver produtos por categoria
+SELECT c.nome as categoria, COUNT(p.id) as total_produtos
+FROM categorias c
+LEFT JOIN produtos p ON c.id = p.categoria_id
+GROUP BY c.nome;
 ```
-column_name | data_type | is_nullable | column_default
-------------|-----------|-------------|----------------
-id          | bigint    | NO          | nextval(...)
-nome        | varchar   | NO          | NULL
-valor       | double    | YES         | NULL
+
+#### Verificar Estrutura das Tabelas:
+```sql
+-- Estrutura da tabela produtos
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'produtos'
+ORDER BY ordinal_position;
+
+-- Ver chaves estrangeiras
+SELECT
+    tc.table_name, 
+    kcu.column_name, 
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+FROM information_schema.table_constraints AS tc 
+JOIN information_schema.key_column_usage AS kcu
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY';
+```
+
+**Resultado esperado (produtos):**
+```
+column_name   | data_type | is_nullable
+--------------|-----------|-------------
+id            | bigint    | NO
+nome          | varchar   | NO
+valor         | double    | YES
+categoria_id  | bigint    | YES  (FK → categorias)
+fornecedor_id | bigint    | YES  (FK → fornecedores)
 ```
 
 ---

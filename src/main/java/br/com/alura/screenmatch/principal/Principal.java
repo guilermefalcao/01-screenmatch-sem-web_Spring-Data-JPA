@@ -55,11 +55,12 @@ public class Principal {
 
             var menu = """
                     1 - Buscar séries
-                    2 - Buscar episódios
+                    2 - Buscar episódios e salvar no banco;
                     3 - Listar series buscadas
-
-                    4 - Exercícios resolvidos
-                    5 - Testar Exercícios JPA (Produto, Categoria, Pedido)
+                    4 - Buscar série por titulo
+                    
+                    5 - Exercícios resolvidos
+                    6 - Testar Exercícios JPA (Produto, Categoria, Pedido)
 
                     0 - Sair
                     """;
@@ -76,12 +77,15 @@ public class Principal {
                     buscarEpisodioPorSerie();
                     break;
                 case 3:
-                    ListarSeriesBuscadas(); // aula 1 criado o metodo para listar series buscadas
+                    ListarSeriesBuscadas();
                     break;
                 case 4:
-                    ExerciciosResolvidos.executarTodos();
+                    buscarSerieporTitulo();
                     break;
                 case 5:
+                    ExerciciosResolvidos.executarTodos();
+                    break;
+                case 6:
                     testeExerciciosJPA.executar();
                     break;
                 case 0:
@@ -117,24 +121,41 @@ public class Principal {
         return dados;
     }
 
+    /**
+     * Método para buscar episódios de uma série
+     * 
+     * EVOLUÇÃO DO CÓDIGO:
+     * ANTES (Aula 02 - início):
+     *   - Buscava na lista em memória: series.stream().filter(...)
+     *   - Problema: Lista pode estar desatualizada
+     * 
+     * AGORA (Aula 03 - Derived Query Methods):
+     *   - Busca direto no banco: repositorio.findByTituloContainingIgnoreCase()
+     *   - Vantagem: Sempre busca dados atualizados do banco
+     *   - Mais eficiente: SQL otimizado pelo Spring Data JPA
+     */
     private void buscarEpisodioPorSerie(){
-        // 1. Lista as séries já salvas no banco
+        // 1. Lista as séries já salvas no banco (para o usuário visualizar)
         ListarSeriesBuscadas();
         
         // 2. Solicita o nome da série para buscar episódios
         System.out.println("Digite o nome da série para busca de episódios:");
         var nomeSerie = leitura.nextLine();
 
-        // 3. Busca a série no banco de dados (lista 'series' foi carregada no método anterior)
-        // Optional: Pode conter um valor ou estar vazio (evita NullPointerException)
-        Optional<Serie> serieBuscada = series.stream()
-            .filter(s -> s.getTitulo().toLowerCase().contains(nomeSerie.toLowerCase()))
-            .findFirst();
+        // 3. NOVO: Busca a série DIRETO NO BANCO usando Derived Query Method
+        // ANTES: Optional<Serie> serie = series.stream().filter(...).findFirst();
+        // AGORA: Busca otimizada no banco de dados
+        Optional<Serie> serie = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+        
+        // Por que mudou?
+        // - Busca direto no banco (sempre atualizado)
+        // - Não depende da lista 'series' em memória
+        // - SQL gerado: SELECT * FROM series WHERE LOWER(titulo) LIKE LOWER('%nomeSerie%')
 
         // 4. Verifica se a série foi encontrada
-        if(serieBuscada.isPresent()) {
+        if(serie.isPresent()) {
             // 5. Obtém a série encontrada do Optional
-            var serieEncontrada = serieBuscada.get();
+            var serieEncontrada = serie.get();
             
             // 6. Verifica se a série já tem episódios salvos
             if (!serieEncontrada.getEpisodios().isEmpty()) {
@@ -208,6 +229,36 @@ public class Principal {
         series.stream() // Cria um novo stream da lista series
                 .sorted(Comparator.comparing(Serie::getGenero)) // Ordena por gênero (categoria)
                 .forEach(System.out::println); // Imprime cada série no console
+    }
+
+
+    /**
+     * Método para buscar série por título no banco de dados
+     * Usa Derived Query Method do Spring Data JPA
+     * 
+     * Como funciona:
+     * 1. Solicita nome da série ao usuário
+     * 2. Busca no banco usando findByTituloContainingIgnoreCase()
+     *    - Containing: Busca parcial (LIKE %nome%)
+     *    - IgnoreCase: Ignora maiúsculas/minúsculas
+     * 3. Retorna Optional<Serie> (pode estar vazio)
+     * 4. Verifica se encontrou e exibe resultado
+     * 
+     * Exemplo SQL gerado:
+     * SELECT * FROM series WHERE LOWER(titulo) LIKE LOWER('%nome%')
+     */
+    private void buscarSerieporTitulo(){
+        System.out.println("Escolha uma serie pelo nome: ");
+        var nomeSerie = leitura.nextLine();
+        
+        // Busca no banco usando método derivado do Spring Data JPA
+        Optional<Serie> serieBuscada = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+
+        if (serieBuscada.isPresent()) {
+            System.out.println("Dados da série: " + serieBuscada.get());
+        } else {
+            System.out.println("❌ Série não encontrada!");
+        }
     }
 
 }

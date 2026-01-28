@@ -47,6 +47,16 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Fetch types (EAGER vs LAZY) e LazyInitializationException
 - ✅ Limpeza de dados com deleteAll() para evitar duplicação
 
+### Aula 03 - Consultas com Spring Data JPA
+
+- ✅ Derived Query Methods (métodos derivados)
+- ✅ Busca por título com findByTituloContainingIgnoreCase
+- ✅ Busca composta com AND (ator + avaliação mínima)
+- ✅ Top N queries com findTop5ByOrderByAvaliacaoDesc
+- ✅ Otimização de buscas (banco vs memória)
+- ✅ Tratamento de dados nulos da API OMDB
+- ✅ Limpeza de séries inválidas do banco
+
 ## 🛠️ Tecnologias Utilizadas
 
 - Java 17
@@ -128,8 +138,12 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **1** - Buscar séries na API OMDB
 - **2** - Buscar episódios de uma série
 - **3** - Listar séries buscadas (do banco de dados)
-- **4** - Ver exercícios resolvidos (Aula 01)
-- **5** - Testar exercícios JPA (Produto, Categoria, Pedido)
+- **4** - Buscar série por título (Derived Query)
+- **5** - Buscar séries por ator e avaliação mínima
+- **6** - Top 5 séries com melhor avaliação
+- **7** - Limpar séries inválidas do banco
+- **8** - Ver exercícios resolvidos (Aula 01)
+- **9** - Testar exercícios JPA (Produto, Categoria, Pedido)
 - **0** - Sair
 
 ## 📝 Conceitos Aprendidos
@@ -158,6 +172,17 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **Relacionamentos bidirecionais (mappedBy)**
 - **Relacionamento N:M com @ManyToMany e @JoinTable**
 
+### Aula 03:
+- **Derived Query Methods** (Spring Data JPA gera SQL automaticamente)
+- **Nomenclatura de métodos** (findBy, Containing, IgnoreCase, And, GreaterThanEqual)
+- **Busca parcial e case-insensitive** (LIKE %texto%)
+- **Queries compostas** com múltiplos critérios (AND, OR)
+- **Top N queries** (findTop5, findFirst10)
+- **Ordenação** (OrderBy...Desc/Asc)
+- **Otimização**: Busca direta no banco vs lista em memória
+- **Tratamento de nulls** da API externa
+- **Limpeza de dados** inválidos com deleteAll()
+
 ## 🔗 Links Úteis
 
 - [API OMDB](http://www.omdbapi.com/)
@@ -178,4 +203,4 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Relacionamentos JPA Completos (@OneToMany/@ManyToOne/@ManyToMany)
+**Última atualização:** Aula 03 - Derived Query Methods e Consultas Avançadas

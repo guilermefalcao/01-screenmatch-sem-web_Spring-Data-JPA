@@ -985,10 +985,447 @@ ORDER BY ped.id;
 ## 📝 Próximas Aulas
 
 - [ ] Consultas personalizadas com JPQL
-- [ ] Relacionamentos entre entidades
-- [ ] Derived Query Methods
+- [ ] Queries nativas com @Query
 - [ ] Paginação e ordenação
-- [ ] Queries nativas
+- [ ] Projeções e DTOs
+
+---
+
+## 🎯 AULA 03 - Derived Query Methods
+
+### O que são Derived Query Methods?
+
+São métodos que o **Spring Data JPA cria automaticamente** baseado no **nome do método**.
+
+Você escreve o nome do método seguindo uma convenção, e o Spring gera o SQL automaticamente!
+
+**Exemplo:**
+```java
+// Você escreve:
+Optional<Serie> findByTituloContainingIgnoreCase(String titulo);
+
+// Spring gera automaticamente:
+SELECT * FROM series WHERE LOWER(titulo) LIKE LOWER('%titulo%');
+```
+
+**Vantagens:**
+- ✅ Não precisa escrever SQL
+- ✅ Type-safe (erros em tempo de compilação)
+- ✅ SQL otimizado automaticamente
+- ✅ Código limpo e legível
+
+---
+
+### 1. Busca por Título (Opção 4)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca série por título (busca parcial, case-insensitive)
+
+**Passos:**
+
+1. **Adicionar método no repositório:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // Busca por título (parcial, case-insensitive)
+    // findBy: Inicia query
+    // Titulo: Campo da entidade Serie
+    // Containing: LIKE %valor%
+    // IgnoreCase: LOWER() no SQL
+    Optional<Serie> findByTituloContainingIgnoreCase(String titulo);
+}
+```
+
+**SQL gerado automaticamente:**
+```sql
+SELECT * FROM series 
+WHERE LOWER(titulo) LIKE LOWER('%boys%');
+```
+
+2. **Usar no menu (Principal.java):**
+```java
+private void buscarSerieporTitulo() {
+    System.out.println("Escolha uma serie pelo nome: ");
+    var nomeSerie = leitura.nextLine();
+    
+    // Busca no banco usando Derived Query Method
+    Optional<Serie> serieBuscada = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+
+    if (serieBuscada.isPresent()) {
+        System.out.println("✅ Dados da série: " + serieBuscada.get());
+    } else {
+        System.out.println("❌ Série não encontrada!");
+    }
+}
+```
+
+**Características:**
+- ✅ Busca **parcial**: "boys" encontra "The Boys"
+- ✅ **Case-insensitive**: "BOYS", "boys", "Boys" funcionam igual
+- ✅ Retorna `Optional<Serie>` (pode estar vazio)
+- ✅ Busca **apenas no banco** (não usa API)
+
+**Conceitos aprendidos:**
+- Derived Query Methods
+- Nomenclatura: findBy + Campo + Containing + IgnoreCase
+- Optional para tratar resultado vazio
+- Busca parcial com LIKE
+
+---
+
+### 2. Otimização: Busca de Episódios (Opção 2)
+**Arquivo:** `principal/Principal.java` - método `buscarEpisodioPorSerie()`
+
+**O que mudou:** Substituiu busca em memória por busca no banco
+
+**ANTES (Aula 02):**
+```java
+// Buscava na lista em memória
+Optional<Serie> serie = series.stream()
+    .filter(s -> s.getTitulo().toLowerCase().contains(nomeSerie.toLowerCase()))
+    .findFirst();
+```
+
+**Problemas:**
+- ❌ Dependia da lista `series` em memória
+- ❌ Lista podia estar desatualizada
+- ❌ Menos eficiente (itera toda a lista)
+
+**AGORA (Aula 03):**
+```java
+// Busca direto no banco usando Derived Query Method
+Optional<Serie> serie = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+```
+
+**Vantagens:**
+- ✅ Busca direto no banco (sempre atualizado)
+- ✅ SQL otimizado pelo Spring Data JPA
+- ✅ Não depende de lista em memória
+- ✅ Mais eficiente (usa índice do banco)
+
+**Conceitos aprendidos:**
+- Otimização: banco vs memória
+- Reutilização de Derived Query Methods
+- Consistência de dados
+
+---
+
+### 3. Busca por Ator e Avaliação Mínima (Opção 5)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca séries com ator específico E avaliação mínima
+
+**Passos:**
+
+1. **Adicionar método COMPOSTO no repositório:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // Busca por ator E avaliação mínima (query composta)
+    // findBy: Inicia query
+    // Atores: Campo da entidade
+    // Containing: LIKE %valor%
+    // IgnoreCase: LOWER()
+    // And: Combina condições (WHERE ... AND ...)
+    // Avaliacao: Campo da entidade
+    // GreaterThanEqual: >= (maior ou igual)
+    List<Serie> findByAtoresContainingIgnoreCaseAndAvaliacaoGreaterThanEqual(
+        String nomeAtor, 
+        Double avaliacao
+    );
+}
+```
+
+**SQL gerado automaticamente:**
+```sql
+SELECT * FROM series 
+WHERE LOWER(atores) LIKE LOWER('%karl%') 
+AND avaliacao >= 8.0;
+```
+
+2. **Usar no menu (Principal.java):**
+```java
+private void buscarSeriesPorAtor() {
+    System.out.println("Qual o nome do ator/atriz para busca: ");
+    var nomeAtor = leitura.nextLine();
+
+    System.out.println("Avaliações a partir de que valor? ");
+    var avaliacao = leitura.nextDouble();
+    leitura.nextLine(); // Limpa buffer do scanner
+    
+    // Busca no banco com DUAS condições (AND)
+    List<Serie> seriesEncontradas = repositorio
+        .findByAtoresContainingIgnoreCaseAndAvaliacaoGreaterThanEqual(nomeAtor, avaliacao);
+    
+    if (seriesEncontradas.isEmpty()) {
+        System.out.println("❌ Nenhuma série encontrada");
+    } else {
+        System.out.println("\n✅ Séries encontradas:");
+        seriesEncontradas.forEach(s -> 
+            System.out.println("- " + s.getTitulo() + " - Avaliação: " + s.getAvaliacao())
+        );
+    }
+}
+```
+
+**Palavras-chave para queries compostas:**
+- `And` → WHERE campo1 = ? AND campo2 = ?
+- `Or` → WHERE campo1 = ? OR campo2 = ?
+- `Between` → WHERE campo BETWEEN ? AND ?
+- `LessThan` → WHERE campo < ?
+- `GreaterThan` → WHERE campo > ?
+- `LessThanEqual` → WHERE campo <= ?
+- `GreaterThanEqual` → WHERE campo >= ?
+
+**Conceitos aprendidos:**
+- Queries compostas com AND
+- Múltiplos parâmetros
+- Comparações numéricas (>=, <=, >, <)
+- Combinação de Containing + GreaterThanEqual
+
+---
+
+### 4. Top 5 Séries (Opção 6)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca as 5 séries com melhor avaliação
+
+**Passos:**
+
+1. **Adicionar método com LIMIT e ORDER BY:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // Top 5 séries por avaliação
+    // findTop5: Limita resultado a 5 registros (LIMIT 5)
+    // By: Separador
+    // OrderBy: Ordenação
+    // Avaliacao: Campo para ordenar
+    // Desc: Ordem decrescente (maior para menor)
+    List<Serie> findTop5ByOrderByAvaliacaoDesc();
+}
+```
+
+**SQL gerado automaticamente:**
+```sql
+SELECT * FROM series 
+ORDER BY avaliacao DESC 
+LIMIT 5;
+```
+
+2. **Usar no menu (Principal.java):**
+```java
+private void buscarTop5Series() {
+    List<Serie> seriesTop = repositorio.findTop5ByOrderByAvaliacaoDesc();
+    System.out.println("\n🏆 Top 5 Séries:");
+    seriesTop.forEach(s -> 
+        System.out.println("- " + s.getTitulo() + " - Avaliação: " + s.getAvaliacao())
+    );
+}
+```
+
+**Variações:**
+- `findTop10By...` → Top 10
+- `findFirst3By...` → Primeiros 3
+- `...OrderByAvaliacaoAsc()` → Ordem crescente (pior para melhor)
+- `...OrderByTituloAsc()` → Ordena por título (A-Z)
+
+**Conceitos aprendidos:**
+- Top N queries (LIMIT)
+- Ordenação (ORDER BY)
+- Desc vs Asc
+- Rankings e listas top
+
+---
+
+### 5. Tratamento de Dados Nulos da API
+**Arquivo:** `model/Serie.java` - construtor
+
+**Problema:** API OMDB pode retornar campos nulos (avaliação, gênero, sinopse)
+
+**Erros comuns:**
+```
+Cannot invoke String.split() because return value is null
+Cannot invoke String.trim() because "in" is null
+```
+
+**Solução: Verificar nulls antes de processar**
+
+```java
+public Serie(DadosSerie dadosSerie) {
+    this.titulo = dadosSerie.titulo();
+    this.totalTemporadas = dadosSerie.totalTemporadas();
+    
+    // ✅ TRATAMENTO DE AVALIAÇÃO NULA
+    if (dadosSerie.avaliacao() != null && 
+        !dadosSerie.avaliacao().isEmpty() && 
+        !dadosSerie.avaliacao().equalsIgnoreCase("N/A")) {
+        this.avaliacao = Double.valueOf(dadosSerie.avaliacao());
+    } else {
+        this.avaliacao = 0.0;  // Valor padrão
+    }
+    
+    // ✅ TRATAMENTO DE GÊNERO NULO
+    if (dadosSerie.genero() != null && !dadosSerie.genero().isEmpty()) {
+        this.genero = Categoria.fromString(dadosSerie.genero().split(",")[0].trim());
+    } else {
+        this.genero = Categoria.ACAO;  // Categoria padrão
+    }
+    
+    // ✅ TRATAMENTO DE SINOPSE NULA
+    if (dadosSerie.sinopse() != null && !dadosSerie.sinopse().isEmpty()) {
+        this.sinopse = ConsultaMyMemory.obterTraducao(dadosSerie.sinopse()).trim();
+    } else {
+        this.sinopse = "Sinopse não disponível";
+    }
+    
+    this.atores = dadosSerie.atores();
+    this.poster = dadosSerie.poster();
+}
+```
+
+**Conceitos aprendidos:**
+- Validação de nulls
+- Valores padrão (fallback)
+- Tratamento de erros da API
+- Robustez do código
+
+---
+
+### 6. Limpeza de Séries Inválidas (Opção 7)
+**Arquivo:** `principal/Principal.java`
+
+**O que faz:** Remove séries com título nulo ou vazio do banco
+
+**Problema:** Quando API retorna dados inválidos, séries com nulls são salvas
+
+**Solução:**
+
+```java
+private void limparSeriesInvalidas() {
+    // 1. Busca todas as séries do banco
+    List<Serie> todasSeries = repositorio.findAll();
+    
+    // 2. Filtra séries inválidas (título nulo ou vazio)
+    List<Serie> seriesInvalidas = todasSeries.stream()
+        .filter(s -> s.getTitulo() == null || s.getTitulo().trim().isEmpty())
+        .toList();
+    
+    // 3. Verifica se há séries inválidas
+    if (seriesInvalidas.isEmpty()) {
+        System.out.println("✅ Não há séries inválidas no banco.");
+    } else {
+        // 4. Remove séries inválidas
+        repositorio.deleteAll(seriesInvalidas);
+        System.out.println("🗑️  " + seriesInvalidas.size() + " série(s) inválida(s) removida(s).");
+    }
+}
+```
+
+**SQL gerado:**
+```sql
+-- Busca séries inválidas
+SELECT * FROM series WHERE titulo IS NULL OR titulo = '';
+
+-- Remove séries inválidas
+DELETE FROM series WHERE id IN (3, 4);
+```
+
+**Conceitos aprendidos:**
+- deleteAll() com lista filtrada
+- Stream filter para validação
+- Limpeza de dados inconsistentes
+- Manutenção do banco de dados
+
+---
+
+## 📊 Tabela de Derived Query Methods
+
+| Método | SQL Gerado | Uso |
+|--------|------------|-----|
+| findByTitulo(String) | WHERE titulo = ? | Busca exata |
+| findByTituloContaining(String) | WHERE titulo LIKE %?% | Busca parcial |
+| findByTituloIgnoreCase(String) | WHERE LOWER(titulo) = LOWER(?) | Case-insensitive |
+| findByTituloContainingIgnoreCase(String) | WHERE LOWER(titulo) LIKE LOWER(%?%) | Parcial + case-insensitive |
+| findByAvaliacaoGreaterThan(Double) | WHERE avaliacao > ? | Maior que |
+| findByAvaliacaoGreaterThanEqual(Double) | WHERE avaliacao >= ? | Maior ou igual |
+| findByAvaliacaoLessThan(Double) | WHERE avaliacao < ? | Menor que |
+| findByAvaliacaoBetween(Double, Double) | WHERE avaliacao BETWEEN ? AND ? | Entre valores |
+| findByGenero(Categoria) | WHERE genero = ? | Enum |
+| findByAtoresContainingAndAvaliacaoGreaterThan | WHERE atores LIKE %?% AND avaliacao > ? | Múltiplas condições |
+| findTop5ByOrderByAvaliacaoDesc() | ORDER BY avaliacao DESC LIMIT 5 | Top N |
+| findByTituloOrderByAvaliacaoDesc(String) | WHERE titulo = ? ORDER BY avaliacao DESC | Busca + ordenação |
+
+---
+
+## 🔍 Verificar no DBeaver
+
+### Queries úteis após Aula 03:
+
+```sql
+-- Ver todas as séries
+SELECT * FROM series ORDER BY avaliacao DESC;
+
+-- Buscar por título (como opção 4)
+SELECT * FROM series WHERE LOWER(titulo) LIKE LOWER('%boys%');
+
+-- Buscar por ator e avaliação (como opção 5)
+SELECT * FROM series 
+WHERE LOWER(atores) LIKE LOWER('%karl%') 
+AND avaliacao >= 8.0;
+
+-- Top 5 séries (como opção 6)
+SELECT titulo, avaliacao FROM series 
+ORDER BY avaliacao DESC 
+LIMIT 5;
+
+-- Encontrar séries inválidas (como opção 7)
+SELECT * FROM series WHERE titulo IS NULL OR titulo = '';
+
+-- Deletar séries inválidas
+DELETE FROM series WHERE titulo IS NULL OR titulo = '';
+```
+
+---
+
+## 📝 Resumo da Aula 03
+
+### ✅ O que você aprendeu:
+
+1. **Derived Query Methods**
+   - Spring Data JPA gera SQL automaticamente
+   - Nomenclatura: findBy + Campo + Operador
+   - Type-safe e otimizado
+
+2. **Busca por título**
+   - findByTituloContainingIgnoreCase
+   - Busca parcial (LIKE %texto%)
+   - Case-insensitive (LOWER)
+
+3. **Queries compostas**
+   - Múltiplos critérios com AND
+   - findBy...And...
+   - Comparações numéricas (>=, <=, >, <)
+
+4. **Top N queries**
+   - findTop5ByOrderBy...
+   - LIMIT e ORDER BY
+   - Rankings e listas top
+
+5. **Otimização**
+   - Busca direta no banco vs memória
+   - Reutilização de métodos
+   - Consistência de dados
+
+6. **Tratamento de nulls**
+   - Validação antes de processar
+   - Valores padrão (fallback)
+   - Robustez contra erros da API
+
+7. **Limpeza de dados**
+   - deleteAll() com lista filtrada
+   - Manutenção do banco
+   - Remoção de dados inválidos
 
 ---
 

@@ -49,6 +49,68 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
      */
     Optional<Serie> findByTituloContainingIgnoreCase(String nomeSerie);
     
+    /**
+     * Busca séries por ator/atriz E avaliação mínima (DERIVED QUERY METHOD COMPOSTO)
+     * 
+     * Nomenclatura do método:
+     * - findBy: Indica que é uma busca
+     * - Atores: Primeiro critério de busca
+     * - Containing: Busca parcial no campo atores
+     * - IgnoreCase: Ignora maiúsculas/minúsculas
+     * - And: Combina dois critérios (WHERE ... AND ...)
+     * - Avaliacao: Segundo critério de busca
+     * - GreaterThanEqual: Maior ou igual (>=)
+     * 
+     * SQL gerado automaticamente:
+     * SELECT * FROM series 
+     * WHERE LOWER(atores) LIKE LOWER('%nomeAtor%') 
+     * AND avaliacao >= :avaliacao
+     * 
+     * @param nomeAtor Nome ou parte do nome do ator
+     * @param avaliacao Avaliação mínima (ex: 8.0)
+     * @return List<Serie> - Lista de séries que atendem AMBOS os critérios
+     * 
+     * Exemplos de uso:
+     * - findBy...(...("Karl", 8.0) → Séries com Karl Urban E avaliação >= 8.0
+     * - findBy...(...("Jennifer", 9.0) → Séries com Jennifer Aniston E avaliação >= 9.0
+     * 
+     * Outros operadores disponíveis:
+     * - GreaterThan: Maior que (>)
+     * - LessThan: Menor que (<)
+     * - LessThanEqual: Menor ou igual (<=)
+     * - Between: Entre dois valores
+     */
+    List<Serie> findByAtoresContainingIgnoreCaseAndAvaliacaoGreaterThanEqual(String nomeAtor, Double avaliacao);
+
+    /**
+     * Busca Top 5 séries com melhor avaliação (LIMIT + ORDER BY)
+     * 
+     * Nomenclatura do método:
+     * - findTop5: Limita resultado a 5 registros (LIMIT 5)
+     * - By: Separador (obrigatório mesmo sem condição WHERE)
+     * - OrderBy: Indica ordenação
+     * - Avaliacao: Campo para ordenar
+     * - Desc: Ordem decrescente (maior para menor)
+     * 
+     * SQL gerado automaticamente:
+     * SELECT * FROM series 
+     * ORDER BY avaliacao DESC 
+     * LIMIT 5
+     * 
+     * @return List<Serie> - Lista com no máximo 5 séries ordenadas por avaliação
+     * 
+     * Exemplos de uso:
+     * - findTop5ByOrderByAvaliacaoDesc() → Top 5 séries
+     * - findTop10ByOrderByAvaliacaoDesc() → Top 10 séries
+     * - findFirst3ByOrderByTituloAsc() → Primeiras 3 séries por título (A-Z)
+     * 
+     * Variações:
+     * - Top5, Top10, First3, etc.
+     * - Desc (decrescente) ou Asc (crescente)
+     * - Pode combinar com WHERE: findTop5ByGeneroOrderByAvaliacaoDesc(Categoria genero)
+     */
+    List<Serie> findTop5ByOrderByAvaliacaoDesc();
+    
     // ========================================
     // OUTROS EXEMPLOS DE DERIVED QUERY METHODS
     // ========================================
@@ -63,10 +125,13 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
     // Busca séries com avaliação maior ou igual
     // List<Serie> findByAvaliacaoGreaterThanEqual(Double avaliacao);
     
-    // Busca top 5 séries por avaliação
+    // Busca top 5 séries por avaliação (implementado acima)
     // List<Serie> findTop5ByOrderByAvaliacaoDesc();
     
     // Busca por gênero e avaliação mínima
     // List<Serie> findByGeneroAndAvaliacaoGreaterThanEqual(Categoria genero, Double avaliacao);
+    
+    // Busca por número de temporadas
+    // List<Serie> findByTotalTemporadasLessThanEqual(Integer temporadas);
 
 }

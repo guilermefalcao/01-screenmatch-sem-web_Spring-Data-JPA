@@ -68,16 +68,27 @@ public class Serie {
         this.titulo = dadosSerie.titulo();
         this.totalTemporadas = dadosSerie.totalTemporadas();
         
-        // Tenta converter a avaliação de String para Double
-        // Se a conversão falhar (valor inválido ou "N/A"), atribui 0.0
+        // Trata avaliação nula ou inválida
+        // API pode retornar null, "N/A" ou string vazia
         try {
-            this.avaliacao = Double.valueOf(dadosSerie.avaliacao());
+            // Verifica se a avaliação não é nula antes de converter
+            if (dadosSerie.avaliacao() != null && !dadosSerie.avaliacao().isEmpty() && !dadosSerie.avaliacao().equalsIgnoreCase("N/A")) {
+                this.avaliacao = Double.valueOf(dadosSerie.avaliacao());
+            } else {
+                this.avaliacao = 0.0;
+            }
         } catch (NumberFormatException ex) {
             this.avaliacao = 0.0;
         }
         
-        // Converte a String do gênero para o enum Categoria
-        this.genero = Categoria.fromString(dadosSerie.genero().split(",")[0].trim());
+        // Trata gênero nulo ou inválido
+        // API pode retornar null ou string vazia
+        if (dadosSerie.genero() != null && !dadosSerie.genero().isEmpty()) {
+            this.genero = Categoria.fromString(dadosSerie.genero().split(",")[0].trim());
+        } else {
+            this.genero = Categoria.ACAO; // Categoria padrão quando não informado
+        }
+        
         this.atores = dadosSerie.atores();
         this.poster = dadosSerie.poster();
         

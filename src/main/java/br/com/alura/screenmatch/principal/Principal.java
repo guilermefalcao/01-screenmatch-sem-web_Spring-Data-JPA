@@ -26,9 +26,9 @@ public class Principal {
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
 
-    // 🔒 SEGURANÇA: API Key agora vem da variável de ambiente OMDB_API_KEY
-    // Se a variável não existir, usa uma string vazia (força o usuário a configurar)
-    private final String API_KEY = "&apikey=" + (System.getenv("OMDB_API_KEY") != null ? System.getenv("OMDB_API_KEY") : "");
+    // 🔒 SEGURANÇA: API Key da variável de ambiente OMDB_API_KEY
+    // Fallback temporário: Se não encontrar a variável, usa a chave do .env
+    private final String API_KEY = "&apikey=" + (System.getenv("OMDB_API_KEY") != null ? System.getenv("OMDB_API_KEY") : "6585022c");
 
     private List<DadosSerie> dadosSeries = new ArrayList<>();
     private List<Episodio> episodios = new ArrayList<>();
@@ -54,15 +54,22 @@ public class Principal {
         while (opcao != 0) {
 
             var menu = """
+                    
+                    ==== MENU ====
+                    
                     1 - Buscar séries
-                    2 - Buscar episódios e salvar no banco;
+                    2 - Buscar episódios e salvar no banco
                     3 - Listar series buscadas
                     4 - Buscar série por titulo
+                    5 - Buscar series por ator
+                    6 - Top 5 series
+                    7 - Limpar séries inválidas
                     
-                    5 - Exercícios resolvidos
-                    6 - Testar Exercícios JPA (Produto, Categoria, Pedido)
+                    8 - Exercícios resolvidos
+                    9 - Testar Exercícios JPA (Produto, Categoria, Pedido)
 
                     0 - Sair
+                    
                     """;
 
             System.out.println(menu);
@@ -83,9 +90,18 @@ public class Principal {
                     buscarSerieporTitulo();
                     break;
                 case 5:
-                    ExerciciosResolvidos.executarTodos();
+                    buscarSeriesPorAtor();
                     break;
                 case 6:
+                    buscarTop5Series();
+                    break;
+                case 7:
+                    limparSeriesInvalidas();
+                    break;
+                case 8:
+                    ExerciciosResolvidos.executarTodos();
+                    break;
+                case 9:
                     testeExerciciosJPA.executar();
                     break;
                 case 0:
@@ -232,6 +248,10 @@ public class Principal {
     }
 
 
+
+
+
+
     /**
      * Método para buscar série por título no banco de dados
      * Usa Derived Query Method do Spring Data JPA
@@ -258,6 +278,120 @@ public class Principal {
             System.out.println("Dados da série: " + serieBuscada.get());
         } else {
             System.out.println("❌ Série não encontrada!");
+        }
+    }
+
+
+
+
+    /**
+     * Método para buscar séries por ator/atriz E avaliação mínima
+     * Usa Derived Query Method COMPOSTO do Spring Data JPA
+     * 
+     * EVOLUÇÃO DO CÓDIGO:
+     * ANTES: Buscava apenas por ator
+     *   - findByAtoresContainingIgnoreCase(nomeAtor)
+     * 
+     * AGORA: Busca por ator E avaliação mínima
+     *   - findByAtoresContainingIgnoreCaseAndAvaliacaoGreaterThanEqual(nomeAtor, avaliacao)
+     *   - And: Combina duas condições (WHERE ... AND ...)
+     *   - GreaterThanEqual: Maior ou igual (>=)
+     * 
+     * Como funciona:
+     * 1. Solicita nome do ator ao usuário
+     * 2. Solicita avaliação mínima
+     * 3. Converte String para Double
+     * 4. Busca no banco com DUAS condições:
+     *    - Atores contém o nome (case-insensitive)
+     *    - Avaliação >= valor informado
+     * 5. Exibe séries encontradas com avaliação
+     * 
+     * Exemplo SQL gerado:
+     * SELECT * FROM series 
+     * WHERE LOWER(atores) LIKE LOWER('%nomeAtor%') 
+     * AND avaliacao >= 8.0
+     * 
+     * Exemplos de uso:
+     * - Ator: "Karl", Avaliação: 8.0 → Encontra "The Boys" (8.7)
+     * - Ator: "Jennifer", Avaliação: 9.0 → Não encontra nada (Friends tem 8.9)
+     */
+    private void buscarSeriesPorAtor() {
+        System.out.println("Qual o nome do ator/atriz para busca: ");
+        var nomeAtor = leitura.nextLine();
+
+        System.out.println("Avaliações a partir de que valor? ");
+        var avaliacao = leitura.nextDouble();
+        leitura.nextLine(); // Limpa o buffer do scanner
+        
+        // Busca no banco usando Derived Query Method COMPOSTO
+        // Combina duas condições: ator E avaliação mínima
+        List<Serie> seriesEncontradas = repositorio.findByAtoresContainingIgnoreCaseAndAvaliacaoGreaterThanEqual(nomeAtor, avaliacao);
+        
+        // Verifica se encontrou séries
+        if (seriesEncontradas.isEmpty()) {
+            System.out.println("❌ Nenhuma série encontrada com o ator " + nomeAtor + " e avaliação >= " + avaliacao);
+        } else {
+            System.out.println("\n✅ Séries encontradas com " + nomeAtor + " e avaliação >= " + avaliacao + ":");
+            seriesEncontradas.forEach(s -> 
+                System.out.println("- " + s.getTitulo() + " (" + s.getGenero() + ") - Avaliação: " + s.getAvaliacao() + " - Atores: " + s.getAtores())
+            );
+            System.out.println(); // Linha em branco após resultado
+        }
+    }
+
+
+    /**
+     * Método para buscar Top 5 séries com melhor avaliação
+     * Usa Derived Query Method com LIMIT e ORDER BY
+     * 
+     * Como funciona:
+     * 1. Busca no banco usando findTop5ByOrderByAvaliacaoDesc()
+     *    - findTop5: Limita resultado a 5 registros (LIMIT 5)
+     *    - By: Separador
+     *    - OrderBy: Ordenação
+     *    - Avaliacao: Campo para ordenar
+     *    - Desc: Ordem decrescente (maior para menor)
+     * 2. Retorna List<Serie> com no máximo 5 séries
+     * 3. Exibe título e avaliação de cada série
+     * 
+     * Exemplo SQL gerado:
+     * SELECT * FROM series 
+     * ORDER BY avaliacao DESC 
+     * LIMIT 5
+     * 
+     * Exemplo de uso:
+     * - Retorna as 5 séries com maior avaliação
+     * - Útil para criar rankings
+     * 
+     * Variações:
+     * - findTop10By... → Top 10
+     * - findFirst3By... → Primeiros 3
+     * - ...OrderByAvaliacaoAsc() → Ordem crescente (pior para melhor)
+     */
+    private void buscarTop5Series() {
+        List<Serie> seriesTop = repositorio.findTop5ByOrderByAvaliacaoDesc();
+        System.out.println("\n🏆 Top 5 Séries:");
+        seriesTop.forEach(s -> 
+            System.out.println("- " + s.getTitulo() + " - Avaliação: " + s.getAvaliacao())
+        );
+        System.out.println();
+    }
+
+    /**
+     * Método para limpar séries inválidas do banco
+     * Remove séries com título nulo ou vazio
+     */
+    private void limparSeriesInvalidas() {
+        List<Serie> todasSeries = repositorio.findAll();
+        List<Serie> seriesInvalidas = todasSeries.stream()
+            .filter(s -> s.getTitulo() == null || s.getTitulo().trim().isEmpty())
+            .toList();
+        
+        if (seriesInvalidas.isEmpty()) {
+            System.out.println("✅ Não há séries inválidas no banco.");
+        } else {
+            repositorio.deleteAll(seriesInvalidas);
+            System.out.println("🗑️  " + seriesInvalidas.size() + " série(s) inválida(s) removida(s) do banco.");
         }
     }
 

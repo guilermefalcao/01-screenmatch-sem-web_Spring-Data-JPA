@@ -38,12 +38,25 @@ public enum Categoria {
 
     // Método para converter String em português para o enum Categoria
     public static Categoria fromPortugues(String text) {
-        for (Categoria categoria : Categoria.values()) {
-            if (categoria.categoriaPortugues.equalsIgnoreCase(text)) {
-                return categoria;
-            }
-        }
-        throw new IllegalArgumentException("Nenhuma categoria encontrada para a string fornecida: " + text);
+        // Normaliza o texto convertendo para minúsculo
+        String textNormalizado = text.toLowerCase().trim();
+        
+        // Mapeia todas as variações possíveis (incluindo com problemas de encoding)
+        return switch (textNormalizado) {
+            case "ação", "acao", "açao", "ao", "a?ao", "a?Æo", "action" -> ACAO;
+            case "romance" -> ROMANCE;
+            case "comedia", "comédia", "comedy" -> COMEDIA;
+            case "drama" -> DRAMA;
+            case "crime" -> CRIME;
+            case "suspense", "thriller" -> SUSPENSE;
+            case "terror", "horror" -> TERROR;
+            case "ficcao", "ficção", "ficcao cientifica", "sci-fi", "scifi" -> FICCAO;
+            case "fantasia", "fantasy" -> FANTASIA;
+            case "aventura", "adventure" -> AVENTURA;
+            case "animacao", "animação", "animation" -> ANIMACAO;
+            case "documentario", "documentário", "documentary" -> DOCUMENTARIO;
+            default -> throw new IllegalArgumentException("Nenhuma categoria encontrada para a string fornecida: " + text);
+        };
     }
 
     public String getCategoriaOmdb() {

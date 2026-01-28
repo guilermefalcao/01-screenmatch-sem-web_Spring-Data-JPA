@@ -1431,4 +1431,334 @@ DELETE FROM series WHERE titulo IS NULL OR titulo = '';
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 02 - Relacionamentos JPA Completos (@OneToMany/@ManyToOne/@ManyToMany)
+**Última atualização:** Aula 03 - Derived Query Methods e Consultas Avançadas
+
+---
+
+### 7. Busca por Categoria (Opção 7)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca séries por categoria/gênero usando enum
+
+**Passos:**
+
+1. **Adicionar método no repositório:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // Busca por categoria (enum)
+    // findBy: Inicia query
+    // Genero: Campo da entidade Serie (tipo Categoria)
+    List<Serie> findByGenero(Categoria categoria);
+}
+```
+
+**SQL gerado automaticamente:**
+```sql
+SELECT * FROM series WHERE genero = 'ACAO';
+```
+
+2. **Melhorar enum Categoria para aceitar variações:**
+```java
+public enum Categoria {
+    ACAO("Action", "Ação"),
+    COMEDIA("Comedy", "Comédia"),
+    // ...
+    
+    public static Categoria fromPortugues(String text) {
+        // Normaliza texto e aceita variações
+        String textNormalizado = text.toLowerCase().trim();
+        
+        return switch (textNormalizado) {
+            case "ação", "acao", "açao", "action" -> ACAO;
+            case "comédia", "comedia", "comedy" -> COMEDIA;
+            // ... outras variações
+            default -> throw new IllegalArgumentException("Categoria não encontrada: " + text);
+        };
+    }
+}
+```
+
+3. **Usar no menu com tratamento de erro:**
+```java
+private void buscarSeriePorCategoria() {
+    System.out.println("Digite uma categoria/gênero: ");
+    var nomeGenero = leitura.nextLine();
+    
+    try {
+        // Converte texto para enum
+        Categoria categoria = Categoria.fromPortugues(nomeGenero);
+        
+        // Busca no banco
+        List<Serie> seriesPorCategoria = repositorio.findByGenero(categoria);
+        
+        if (seriesPorCategoria.isEmpty()) {
+            System.out.println("❌ Nenhuma série encontrada para: " + nomeGenero);
+        } else {
+            System.out.println("\n✅ Séries da categoria " + nomeGenero + ":");
+            seriesPorCategoria.forEach(System.out::println);
+        }
+    } catch (IllegalArgumentException e) {
+        System.out.println("❌ Categoria não encontrada: " + nomeGenero);
+        System.out.println("📋 Categorias disponíveis: Ação, Romance, Comédia...");
+    }
+}
+```
+
+**Conceitos aprendidos:**
+- Busca por enum
+- Tratamento de entrada do usuário
+- Variações de texto (com/sem acento)
+- Exception handling
+- Interface amigável
+
+---
+
+### 8. Filtrar Séries por Temporadas e Avaliação (Opção 8)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca séries com número máximo de temporadas E avaliação mínima
+
+**Passos:**
+
+1. **Adicionar método COMPOSTO no repositório:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // Filtro por temporadas E avaliação
+    // findBy: Inicia query
+    // TotalTemporadas: Campo da entidade
+    // LessThanEqual: <= (menor ou igual)
+    // And: Combina condições
+    // Avaliacao: Campo da entidade
+    // GreaterThanEqual: >= (maior ou igual)
+    List<Serie> findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(
+        Integer totalTemporadas, 
+        Double avaliacao
+    );
+}
+```
+
+**SQL gerado automaticamente:**
+```sql
+SELECT * FROM series 
+WHERE total_temporadas <= 3 
+AND avaliacao >= 8.0;
+```
+
+2. **Usar no menu:**
+```java
+private void filtrarSeriesPorTemporadaEAvaliacao() {
+    System.out.println("Filtrar séries até quantas temporadas? ");
+    var totalTemporadas = leitura.nextInt();
+    leitura.nextLine();
+    
+    System.out.println("Com avaliação a partir de que valor? ");
+    var avaliacao = leitura.nextDouble();
+    leitura.nextLine();
+    
+    // Busca com duas condições
+    List<Serie> filtroSeries = repositorio
+        .findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(
+            totalTemporadas, avaliacao
+        );
+    
+    if (filtroSeries.isEmpty()) {
+        System.out.println("❌ Nenhuma série encontrada");
+    } else {
+        System.out.println("\n✅ *** Séries filtradas ***");
+        filtroSeries.forEach(s -> 
+            System.out.println("- " + s.getTitulo() + 
+                " (" + s.getTotalTemporadas() + " temporadas) - " +
+                "Avaliação: " + s.getAvaliacao())
+        );
+    }
+}
+```
+
+**Exemplos de uso:**
+- Até 3 temporadas, avaliação >= 8.0 → Séries curtas e bem avaliadas
+- Até 5 temporadas, avaliação >= 9.0 → Séries médias e excelentes
+
+**Conceitos aprendidos:**
+- Queries com múltiplas condições numéricas
+- LessThanEqual vs GreaterThanEqual
+- Filtros personalizados
+- Combinação de critérios diferentes
+
+---
+
+### 9. Exercícios Avançados: 17 Derived Queries
+**Pasta:** `exerciciosjpa/`
+
+**O que faz:** Implementa 17 exercícios de consultas avançadas com JPA
+
+**Estrutura atualizada:**
+```
+exerciciosjpa/
+├── model/
+│   ├── Produto.java (atualizado)
+│   ├── Categoria.java
+│   └── Pedido.java (+ dataEntrega)
+├── repository/
+│   ├── ProdutoRepository.java (12 queries)
+│   └── PedidoRepository.java (5 queries)
+├── TesteDerivedQueries.java (novo)
+└── TesteExerciciosJPA.java (menu atualizado)
+```
+
+**ProdutoRepository - 12 Derived Queries:**
+
+```java
+public interface ProdutoRepository extends JpaRepository<Produto, Long> {
+    
+    // ===== CONSULTAS BÁSICAS =====
+    List<Produto> findByNome(String nome);                           // 1. Nome exato
+    List<Produto> findByCategoriaNome(String categoriaNome);         // 2. Por categoria
+    List<Produto> findByPrecoGreaterThan(Double preco);              // 3. Preço >
+    List<Produto> findByPrecoLessThan(Double preco);                 // 4. Preço <
+    List<Produto> findByNomeContaining(String termo);                // 5. Nome contém
+    
+    // ===== ORDENAÇÃO =====
+    List<Produto> findByCategoriaNomeOrderByPrecoAsc(String cat);    // 8. Crescente
+    List<Produto> findByCategoriaNomeOrderByPrecoDesc(String cat);   // 9. Decrescente
+    
+    // ===== CONTAGEM =====
+    long countByCategoriaNome(String categoriaNome);                 // 10. Count categoria
+    long countByPrecoGreaterThan(Double preco);                      // 11. Count preço
+    
+    // ===== COMPOSTAS (OR) =====
+    List<Produto> findByPrecoLessThanOrNomeContaining(Double p, String t); // 12. OR
+    
+    // ===== TOP/LIMIT =====
+    List<Produto> findTop3ByOrderByPrecoDesc();                      // 16. Top 3 caros
+    List<Produto> findTop5ByCategoriaNomeOrderByPrecoAsc(String c);  // 17. Top 5 baratos
+}
+```
+
+**PedidoRepository - 5 Derived Queries:**
+
+```java
+public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    
+    // ===== DATA DE ENTREGA =====
+    List<Pedido> findByDataEntregaIsNull();                          // 6. Sem entrega
+    List<Pedido> findByDataEntregaIsNotNull();                       // 7. Com entrega
+    
+    // ===== DATA DO PEDIDO =====
+    List<Pedido> findByDataAfter(LocalDate data);                    // 13. Após data
+    List<Pedido> findByDataBefore(LocalDate data);                   // 14. Antes data
+    List<Pedido> findByDataBetween(LocalDate inicio, LocalDate fim); // 15. Entre datas
+}
+```
+
+**TesteDerivedQueries - Menu Interativo:**
+
+```java
+@Component
+public class TesteDerivedQueries {
+    @Autowired private ProdutoRepository produtoRepository;
+    @Autowired private PedidoRepository pedidoRepository;
+    
+    public void executarTestes() {
+        // Cria dados de teste automaticamente
+        criarDadosDeTeste();
+        
+        // Menu com 6 categorias:
+        // 1 - Consultas Básicas (1-5)
+        // 2 - Consultas com Ordenação (8-9)
+        // 3 - Consultas de Contagem (10-11)
+        // 4 - Consultas Compostas (12)
+        // 5 - Consultas Top/Limit (16-17)
+        // 6 - Consultas de Pedidos (6-7, 13-15)
+    }
+}
+```
+
+**Como testar:**
+1. Menu Principal → Opção 10 (Exercícios JPA)
+2. Submenu → Opção 2 (Derived Queries)
+3. Escolha categoria de teste (1-6)
+4. Veja consultas sendo executadas automaticamente
+
+**Conceitos aprendidos:**
+- 17 tipos diferentes de Derived Queries
+- IsNull vs IsNotNull
+- After, Before, Between para datas
+- Count queries (retorna long)
+- Or em queries compostas
+- Top N com ordenação
+- Relacionamentos em queries (CategoriaNome)
+- Criação automática de dados de teste
+
+---
+
+## 📊 Comparação: Streams vs Derived Queries
+
+| Aspecto | Streams (Memória) | Derived Queries (Banco) |
+|---------|-------------------|-------------------------|
+| **Performance** | ❌ Lenta para grandes volumes | ✅ Rápida (usa índices) |
+| **Memória** | ❌ Carrega todos os dados | ✅ Carrega apenas resultado |
+| **Atualização** | ❌ Pode estar desatualizada | ✅ Sempre atualizada |
+| **Complexidade** | ✅ Fácil de escrever | ✅ Nomenclatura padronizada |
+| **Otimização** | ❌ Não otimizada | ✅ SQL otimizado |
+| **Escalabilidade** | ❌ Limitada | ✅ Escala bem |
+
+**Quando usar cada um:**
+- **Streams:** Manipulação de dados já carregados, transformações complexas
+- **Derived Queries:** Busca de dados, filtros, ordenação, contagem
+
+---
+
+## 📝 Tipos de Retorno em Derived Queries
+
+| Retorno | Quando Usar | Exemplo |
+|---------|-------------|----------|
+| `Optional<T>` | Pode não encontrar (0 ou 1) | `findByTitulo(String)` |
+| `List<T>` | Pode retornar vários (0 ou N) | `findByGenero(Categoria)` |
+| `T` | Sempre encontra (1) | `getById(Long)` |
+| `long` | Contagem | `countByGenero(Categoria)` |
+| `boolean` | Existência | `existsByTitulo(String)` |
+
+**Boas práticas:**
+- Use `Optional<T>` quando resultado pode estar vazio
+- Use `List<T>` para múltiplos resultados
+- Sempre trate `Optional.empty()` e listas vazias
+
+---
+
+## 📊 Resumo da Aula 03 - Atualizado
+
+### ✅ O que você aprendeu:
+
+1. **Derived Query Methods Avançados**
+   - 17 tipos diferentes de consultas
+   - Nomenclatura padronizada
+   - SQL gerado automaticamente
+
+2. **Busca por categoria com enum**
+   - Tratamento de variações de texto
+   - Exception handling
+   - Interface amigável
+
+3. **Filtros compostos avançados**
+   - Múltiplas condições numéricas
+   - LessThanEqual + GreaterThanEqual
+   - Filtros personalizados
+
+4. **Exercícios práticos completos**
+   - 17 derived queries implementadas
+   - Menu interativo de testes
+   - Dados de teste automáticos
+
+5. **Comparação streams vs banco**
+   - Performance e escalabilidade
+   - Quando usar cada abordagem
+   - Otimização de consultas
+
+6. **Tipos de retorno**
+   - Optional vs List vs primitivos
+   - Tratamento de resultados vazios
+   - Boas práticas
+
+---

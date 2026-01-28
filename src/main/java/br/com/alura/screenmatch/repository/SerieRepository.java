@@ -1,5 +1,6 @@
 package br.com.alura.screenmatch.repository;
 
+import br.com.alura.screenmatch.model.Categoria;
 import br.com.alura.screenmatch.model.Serie;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
@@ -133,5 +134,39 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
     
     // Busca por número de temporadas
     // List<Serie> findByTotalTemporadasLessThanEqual(Integer temporadas);
+
+    List<Serie> findByGenero(Categoria categoria);
+
+    /**
+     * Busca séries por número máximo de temporadas E avaliação mínima
+     * Usa Derived Query Method COMPOSTO do Spring Data JPA
+     * 
+     * Nomenclatura do método:
+     * - findBy: Indica que é uma busca
+     * - TotalTemporadas: Primeiro critério de busca
+     * - LessThanEqual: Menor ou igual (<=)
+     * - And: Combina dois critérios (WHERE ... AND ...)
+     * - Avaliacao: Segundo critério de busca
+     * - GreaterThanEqual: Maior ou igual (>=)
+     * 
+     * SQL gerado automaticamente:
+     * SELECT * FROM series 
+     * WHERE total_temporadas <= :totalTemporadas 
+     * AND avaliacao >= :avaliacao
+     * 
+     * @param totalTemporadas Número máximo de temporadas (ex: 3)
+     * @param avaliacao Avaliação mínima (ex: 8.0)
+     * @return List<Serie> - Lista de séries que atendem AMBOS os critérios
+     * 
+     * Exemplos de uso:
+     * - findBy...(3, 8.0) → Séries com até 3 temporadas E avaliação >= 8.0
+     * - findBy...(5, 9.0) → Séries com até 5 temporadas E avaliação >= 9.0
+     */
+    List<Serie> findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(Integer totalTemporadas, Double avaliacao);
+
+
+
+
+
 
 }

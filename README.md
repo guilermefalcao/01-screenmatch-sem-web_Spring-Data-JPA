@@ -53,9 +53,13 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Busca por título com findByTituloContainingIgnoreCase
 - ✅ Busca composta com AND (ator + avaliação mínima)
 - ✅ Top N queries com findTop5ByOrderByAvaliacaoDesc
+- ✅ Busca por categoria com enum e tratamento de variações
+- ✅ Filtrar séries por temporadas e avaliação
+- ✅ 17 exercícios avançados de Derived Queries
 - ✅ Otimização de buscas (banco vs memória)
 - ✅ Tratamento de dados nulos da API OMDB
-- ✅ Limpeza de séries inválidas do banco
+- ✅ Comparação: Streams vs Derived Queries
+- ✅ Tipos de retorno (Optional, List, long, boolean)
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -141,9 +145,10 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **4** - Buscar série por título (Derived Query)
 - **5** - Buscar séries por ator e avaliação mínima
 - **6** - Top 5 séries com melhor avaliação
-- **7** - Limpar séries inválidas do banco
-- **8** - Ver exercícios resolvidos (Aula 01)
-- **9** - Testar exercícios JPA (Produto, Categoria, Pedido)
+- **7** - Buscar séries por categoria
+- **8** - Filtrar séries por temporadas e avaliação
+- **9** - Ver exercícios resolvidos (Aula 01)
+- **10** - Testar exercícios JPA e Derived Queries
 - **0** - Sair
 
 ## 📝 Conceitos Aprendidos

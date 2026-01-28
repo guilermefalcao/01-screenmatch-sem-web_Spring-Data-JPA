@@ -64,6 +64,13 @@ public class Produto {
         this.preco = preco;
     }
     
+    // Construtor com categoria
+    public Produto(String nome, Double preco, Categoria categoria) {
+        this.nome = nome;
+        this.preco = preco;
+        this.categoria = categoria;
+    }
+    
     // Getters e Setters
     public Long getId() {
         return id;

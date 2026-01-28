@@ -2,6 +2,7 @@ package br.com.alura.screenmatch.principal;
 
 import br.com.alura.screenmatch.exercicios.ExerciciosResolvidos;
 import br.com.alura.screenmatch.exerciciosjpa.TesteExerciciosJPA;
+import br.com.alura.screenmatch.model.Categoria;
 import br.com.alura.screenmatch.model.DadosSerie;
 import br.com.alura.screenmatch.model.DadosTemporada;
 import br.com.alura.screenmatch.model.Episodio;
@@ -63,10 +64,11 @@ public class Principal {
                     4 - Buscar série por titulo
                     5 - Buscar series por ator
                     6 - Top 5 series
-                    7 - Limpar séries inválidas
+                    7 - Buscar séries por categoria
+                    8 - Filtrar séries
                     
-                    8 - Exercícios resolvidos
-                    9 - Testar Exercícios JPA (Produto, Categoria, Pedido)
+                    9 - Exercícios resolvidos
+                    10 - Testar Exercícios JPA (Produto, Categoria, Pedido)
 
                     0 - Sair
                     
@@ -96,12 +98,15 @@ public class Principal {
                     buscarTop5Series();
                     break;
                 case 7:
-                    limparSeriesInvalidas();
+                    buscarSeriePorCategoria();
                     break;
                 case 8:
-                    ExerciciosResolvidos.executarTodos();
+                    filtrarSeriesPorTemporadaEAvaliacao();
                     break;
                 case 9:
+                    ExerciciosResolvidos.executarTodos();
+                    break;
+                case 10:
                     testeExerciciosJPA.executar();
                     break;
                 case 0:
@@ -378,21 +383,118 @@ public class Principal {
     }
 
     /**
-     * Método para limpar séries inválidas do banco
-     * Remove séries com título nulo ou vazio
+     * Método para buscar séries por categoria/gênero
+     * Usa Derived Query Method do Spring Data JPA com Enum
+     * 
+     * Como funciona:
+     * 1. Solicita categoria em português ao usuário (ex: "ação", "romance")
+     * 2. Converte o texto para o enum Categoria usando fromPortugues()
+     * 3. Busca no banco usando findByGenero(categoria)
+     *    - Busca exata por categoria (WHERE genero = ?)
+     * 4. Exibe todas as séries da categoria encontrada
+     * 
+     * Exemplo SQL gerado:
+     * SELECT * FROM series WHERE genero = 'ACTION'
+     * 
+     * Exemplos de uso:
+     * - Usuário digita: "ação" → Busca séries com genero = ACTION
+     * - Usuário digita: "romance" → Busca séries com genero = ROMANCE
+     * - Usuário digita: "comédia" → Busca séries com genero = COMEDY
+     * 
+     * Vantagens:
+     * - Interface amigável (usuário digita em português)
+     * - Busca tipada e segura (usa enum)
+     * - Consulta otimizada no banco de dados
      */
-    private void limparSeriesInvalidas() {
-        List<Serie> todasSeries = repositorio.findAll();
-        List<Serie> seriesInvalidas = todasSeries.stream()
-            .filter(s -> s.getTitulo() == null || s.getTitulo().trim().isEmpty())
-            .toList();
+    private void buscarSeriePorCategoria() {
+        System.out.println("Digite uma categoria/gênero: ");
+        var nomeGenero = leitura.nextLine();
         
-        if (seriesInvalidas.isEmpty()) {
-            System.out.println("✅ Não há séries inválidas no banco.");
-        } else {
-            repositorio.deleteAll(seriesInvalidas);
-            System.out.println("🗑️  " + seriesInvalidas.size() + " série(s) inválida(s) removida(s) do banco.");
+        try {
+            // Converte o texto em português para o enum Categoria
+            // Ex: "ação" → Categoria.ACTION, "romance" → Categoria.ROMANCE
+            Categoria categoria = Categoria.fromPortugues(nomeGenero);
+            
+            // Busca no banco usando Derived Query Method
+            List<Serie> seriesPorCategoria = repositorio.findByGenero(categoria);
+            
+            // Verifica se encontrou séries
+            if (seriesPorCategoria.isEmpty()) {
+                System.out.println("❌ Nenhuma série encontrada para a categoria: " + nomeGenero);
+            } else {
+                System.out.println("\n✅ Séries da categoria " + nomeGenero + ":");
+                seriesPorCategoria.forEach(System.out::println);
+                System.out.println();
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ Categoria não encontrada: " + nomeGenero);
+            System.out.println("📋 Categorias disponíveis:");
+            System.out.println("- Ação");
+            System.out.println("- Romance");
+            System.out.println("- Comédia");
+            System.out.println("- Drama");
+            System.out.println("- Crime");
+            System.out.println("- Suspense");
+            System.out.println("- Terror");
+            System.out.println("- Ficção Científica");
+            System.out.println("- Fantasia");
+            System.out.println("- Aventura");
+            System.out.println("- Animação");
+            System.out.println("- Documentário");
         }
     }
+
+    /**
+     * Método para filtrar séries por número máximo de temporadas E avaliação mínima
+     * Usa Derived Query Method COMPOSTO do Spring Data JPA
+     * 
+     * Como funciona:
+     * 1. Solicita número máximo de temporadas ao usuário
+     * 2. Solicita avaliação mínima
+     * 3. Busca no banco com DUAS condições:
+     *    - Total de temporadas <= valor informado
+     *    - Avaliação >= valor informado
+     * 4. Exibe séries filtradas com título e avaliação
+     * 
+     * Exemplo SQL gerado:
+     * SELECT * FROM series 
+     * WHERE total_temporadas <= 3 
+     * AND avaliacao >= 8.0
+     * 
+     * Exemplos de uso:
+     * - Até 3 temporadas, avaliação >= 8.0 → Séries curtas e bem avaliadas
+     * - Até 5 temporadas, avaliação >= 9.0 → Séries médias e excelentes
+     * 
+     * Vantagens:
+     * - Filtra séries por duração (para quem não quer séries muito longas)
+     * - Garante qualidade mínima (avaliação)
+     * - Consulta otimizada no banco de dados
+     */
+    private void filtrarSeriesPorTemporadaEAvaliacao() {
+        System.out.println("Filtrar séries até quantas temporadas? ");
+        var totalTemporadas = leitura.nextInt();
+        leitura.nextLine(); // Limpa o buffer do scanner
+        
+        System.out.println("Com avaliação a partir de que valor? ");
+        var avaliacao = leitura.nextDouble();
+        leitura.nextLine(); // Limpa o buffer do scanner
+        
+        // Busca no banco usando Derived Query Method COMPOSTO
+        // Combina duas condições: temporadas <= valor E avaliação >= valor
+        List<Serie> filtroSeries = repositorio.findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(totalTemporadas, avaliacao);
+        
+        // Verifica se encontrou séries
+        if (filtroSeries.isEmpty()) {
+            System.out.println("❌ Nenhuma série encontrada com até " + totalTemporadas + " temporadas e avaliação >= " + avaliacao);
+        } else {
+            System.out.println("\n✅ *** Séries filtradas ***");
+            System.out.println("Até " + totalTemporadas + " temporadas, avaliação >= " + avaliacao + ":");
+            filtroSeries.forEach(s -> 
+                System.out.println("- " + s.getTitulo() + " (" + s.getTotalTemporadas() + " temporadas) - Avaliação: " + s.getAvaliacao())
+            );
+            System.out.println();
+        }
+    }
+
 
 }

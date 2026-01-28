@@ -28,7 +28,46 @@ public class TesteExerciciosJPA {
     @Autowired
     private FornecedorRepository fornecedorRepository;
     
+    @Autowired
+    private TesteDerivedQueries testeDerivedQueries;
+
     public void executar() {
+        var opcao = -1;
+        var scanner = new java.util.Scanner(System.in);
+        
+        while (opcao != 0) {
+            var menu = """
+                    
+                    === EXERCÍCIOS JPA ===
+                    
+                    1 - Testar relacionamentos básicos
+                    2 - Testar Derived Queries (17 exercícios)
+                    
+                    0 - Voltar
+                    
+                    """;
+            
+            System.out.println(menu);
+            opcao = scanner.nextInt();
+            scanner.nextLine();
+            
+            switch (opcao) {
+                case 1:
+                    testarRelacionamentos();
+                    break;
+                case 2:
+                    testeDerivedQueries.executarTestes();
+                    break;
+                case 0:
+                    System.out.println("Voltando ao menu principal...");
+                    break;
+                default:
+                    System.out.println("Opção inválida!");
+            }
+        }
+    }
+    
+    private void testarRelacionamentos() {
         System.out.println("\n========================================");
         System.out.println("EXERCÍCIOS JPA - RELACIONAMENTOS");
         System.out.println("========================================\n");

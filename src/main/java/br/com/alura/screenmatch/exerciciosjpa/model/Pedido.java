@@ -17,6 +17,9 @@ public class Pedido {
     @Column(nullable = false)
     private LocalDate data;
     
+    @Column(name = "data_entrega")
+    private LocalDate dataEntrega;
+    
     // ========================================
     // EXERCÍCIO EXTRA: RELACIONAMENTO MUITOS-PARA-MUITOS (lado inverso)
     // ========================================
@@ -35,6 +38,12 @@ public class Pedido {
         this.data = data;
     }
     
+    // Construtor com data e data de entrega
+    public Pedido(LocalDate data, LocalDate dataEntrega) {
+        this.data = data;
+        this.dataEntrega = dataEntrega;
+    }
+    
     // Getters
     public Long getId() {
         return id;
@@ -42,6 +51,14 @@ public class Pedido {
     
     public LocalDate getData() {
         return data;
+    }
+    
+    public LocalDate getDataEntrega() {
+        return dataEntrega;
+    }
+    
+    public void setDataEntrega(LocalDate dataEntrega) {
+        this.dataEntrega = dataEntrega;
     }
     
     public List<Produto> getProdutos() {

@@ -66,9 +66,10 @@ public class Principal {
                     6 - Top 5 series
                     7 - Buscar séries por categoria
                     8 - Filtrar séries
+                    9 - Buscar episódio por trecho
                     
-                    9 - Exercícios resolvidos
-                    10 - Testar Exercícios JPA (Produto, Categoria, Pedido)
+                    10 - Exercícios resolvidos
+                    11 - Testar Exercícios JPA (Produto, Categoria, Pedido)
 
                     0 - Sair
                     
@@ -104,9 +105,12 @@ public class Principal {
                     filtrarSeriesPorTemporadaEAvaliacao();
                     break;
                 case 9:
-                    ExerciciosResolvidos.executarTodos();
+                    buscarEpisodioPorTrecho();
                     break;
                 case 10:
+                    ExerciciosResolvidos.executarTodos();
+                    break;
+                case 11:
                     testeExerciciosJPA.executar();
                     break;
                 case 0:
@@ -446,7 +450,18 @@ public class Principal {
 
     /**
      * Método para filtrar séries por número máximo de temporadas E avaliação mínima
-     * Usa Derived Query Method COMPOSTO do Spring Data JPA
+     * 
+     * EVOLUÇÃO DO CÓDIGO - DUAS ABORDAGENS DISPONÍVEIS:
+     * 
+     * ABORDAGEM 1 - Derived Query Method (implementada):
+     * repositorio.findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual()
+     * ✅ Vantagem: Sem código SQL, Spring gera automaticamente
+     * ❌ Desvantagem: Nome do método muito longo
+     * 
+     * ABORDAGEM 2 - JPQL (alternativa):
+     * repositorio.seriesPorTemporadaEAvaliacao()
+     * ✅ Vantagem: Nome do método mais limpo, query explícita
+     * ❌ Desvantagem: Precisa escrever JPQL manualmente
      * 
      * Como funciona:
      * 1. Solicita número máximo de temporadas ao usuário
@@ -456,10 +471,10 @@ public class Principal {
      *    - Avaliação >= valor informado
      * 4. Exibe séries filtradas com título e avaliação
      * 
-     * Exemplo SQL gerado:
+     * SQL gerado (ambas as abordagens):
      * SELECT * FROM series 
-     * WHERE total_temporadas <= 3 
-     * AND avaliacao >= 8.0
+     * WHERE total_temporadas <= ? 
+     * AND avaliacao >= ?
      * 
      * Exemplos de uso:
      * - Até 3 temporadas, avaliação >= 8.0 → Séries curtas e bem avaliadas
@@ -479,9 +494,14 @@ public class Principal {
         var avaliacao = leitura.nextDouble();
         leitura.nextLine(); // Limpa o buffer do scanner
         
-        // Busca no banco usando Derived Query Method COMPOSTO
-        // Combina duas condições: temporadas <= valor E avaliação >= valor
-        List<Serie> filtroSeries = repositorio.findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(totalTemporadas, avaliacao);
+        // ESCOLHA DA ABORDAGEM:
+        // Descomente a linha que deseja usar:
+        
+        // ABORDAGEM 1: Derived Query Method (nome longo, mas automático)
+        //List<Serie> filtroSeries = repositorio.findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(totalTemporadas, avaliacao);
+        
+        // ABORDAGEM 2: JPQL (nome limpo, query explícita)
+         List<Serie> filtroSeries = repositorio.seriesPorTemporadaEAvaliacao(totalTemporadas, avaliacao);
         
         // Verifica se encontrou séries
         if (filtroSeries.isEmpty()) {
@@ -496,5 +516,53 @@ public class Principal {
         }
     }
 
+    /**
+     * Método para buscar episódios por trecho do título usando JPQL com JOIN
+     * 
+     * O QUE FAZ:
+     * Busca episódios em TODAS as séries que contenham o trecho no título
+     * 
+     * JPQL USADO:
+     * SELECT e FROM Serie s JOIN s.episodios e WHERE e.titulo ILIKE %:trechoEpisodio%
+     * 
+     * EXPLICAÇÃO DA QUERY:
+     * - SELECT e: Seleciona apenas os episódios (não a série inteira)
+     * - FROM Serie s: Começa pela entidade Serie (alias 's')
+     * - JOIN s.episodios e: Faz JOIN com a lista de episódios da série (alias 'e')
+     * - WHERE e.titulo ILIKE %:trechoEpisodio%: Busca parcial case-insensitive
+     *   - ILIKE: Case-insensitive LIKE (PostgreSQL)
+     *   - %:trechoEpisodio%: Parâmetro nomeado com wildcards
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM episodios e
+     * JOIN series s ON e.serie_id = s.id
+     * WHERE LOWER(e.titulo) LIKE LOWER('%trecho%')
+     * 
+     * EXEMPLO DE USO:
+     * - Usuário digita: "pilot" → Encontra todos os episódios com "pilot" no título
+     * - Usuário digita: "finale" → Encontra todos os episódios finais
+     * 
+     * VANTAGENS DO JPQL COM JOIN:
+     * ✅ Busca em TODAS as séries de uma vez
+     * ✅ Retorna apenas episódios (não séries completas)
+     * ✅ Query otimizada com JOIN no banco
+     * ✅ Case-insensitive (ILIKE)
+     */
+    private void buscarEpisodioPorTrecho() {
+        System.out.println("Qual o nome do episódio para busca?");
+        var trechoEpisodio = leitura.nextLine();
+        
+        // Busca episódios usando JPQL com JOIN
+        List<Episodio> episodiosEncontrados = repositorio.episodiosPorTrecho(trechoEpisodio);
+        
+        // Verifica se encontrou episódios
+        if (episodiosEncontrados.isEmpty()) {
+            System.out.println("❌ Nenhum episódio encontrado com o trecho: " + trechoEpisodio);
+        } else {
+            System.out.println("\n✅ Episódios encontrados:");
+            episodiosEncontrados.forEach(System.out::println);
+            System.out.println();
+        }
+    }
 
 }

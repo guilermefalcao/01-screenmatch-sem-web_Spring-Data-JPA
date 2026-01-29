@@ -1,8 +1,12 @@
 package br.com.alura.screenmatch.repository;
 
 import br.com.alura.screenmatch.model.Categoria;
+import br.com.alura.screenmatch.model.Episodio;
 import br.com.alura.screenmatch.model.Serie;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -164,9 +168,103 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
      */
     List<Serie> findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(Integer totalTemporadas, Double avaliacao);
 
+    // ========================================
+    // JPQL (Java Persistence Query Language)
+    // ========================================
+    // JPQL permite escrever queries personalizadas usando nomes de classes Java
+    // em vez de tabelas SQL. Oferece mais flexibilidade que Derived Queries.
+    
+    /**
+     * COMPARAÇÃO: Derived Query vs JPQL
+     * 
+     * DERIVED QUERY METHOD (implementado acima):
+     * List<Serie> findByTotalTemporadasLessThanEqualAndAvaliacaoGreaterThanEqual(Integer, Double);
+     * 
+     * JPQL (implementado abaixo):
+     * @Query("SELECT s FROM Serie s WHERE s.totalTemporadas <= :temporadas AND s.avaliacao >= :avaliacao")
+     * List<Serie> seriesPorTemporadaEAvaliacao(@Param("temporadas") Integer totalTemporadas, @Param("avaliacao") Double avaliacao);
+     * 
+     * VANTAGENS DO JPQL:
+     * ✅ Nome do método livre (não precisa seguir convenção)
+     * ✅ Query mais legível e explícita
+     * ✅ Permite queries complexas (subconsultas, joins, funções)
+     * ✅ Controle total sobre a consulta
+     * ✅ Reutilização de queries complexas
+     * 
+     * DESVANTAGENS DO JPQL:
+     * ❌ Mais código para escrever
+     * ❌ Possibilidade de erros de sintaxe
+     * ❌ Requer conhecimento de JPQL
+     * ❌ Menos "mágico" que Derived Queries
+     * 
+     * QUANDO USAR JPQL:
+     * - Queries muito complexas
+     * - Joins personalizados
+     * - Subconsultas
+     * - Funções agregadas avançadas
+     * - Quando Derived Query fica muito longa
+     */
+    
+    /**
+     * Busca séries por temporadas e avaliação usando JPQL
+     * 
+     * JPQL Syntax:
+     * - SELECT s FROM Serie s: Seleciona entidade Serie (alias 's')
+     * - WHERE s.totalTemporadas <= :temporadas: Usa atributo Java (não coluna SQL)
+     * - :temporadas: Parâmetro nomeado (binding seguro)
+     * - AND s.avaliacao >= :avaliacao: Segunda condição
+     * 
+     * SQL equivalente gerado:
+     * SELECT * FROM series 
+     * WHERE total_temporadas <= ? 
+     * AND avaliacao >= ?
+     * 
+     * @param temporadas Número máximo de temporadas
+     * @param avaliacao Avaliação mínima
+     * @return Lista de séries filtradas
+     * 
+     * Exemplos de uso:
+     * - seriesPorTemporadaEAvaliacao(3, 8.0) → Séries até 3 temporadas, avaliação >= 8.0
+     * - seriesPorTemporadaEAvaliacao(5, 9.0) → Séries até 5 temporadas, avaliação >= 9.0
+     */
+    @Query("SELECT s FROM Serie s WHERE s.totalTemporadas <= :temporadas AND s.avaliacao >= :avaliacao")
+    List<Serie> seriesPorTemporadaEAvaliacao(@Param("temporadas") Integer totalTemporadas, @Param("avaliacao") Double avaliacao);
 
-
-
-
+    /**
+     * Busca episódios por trecho do título usando JPQL com JOIN
+     * 
+     * JPQL SYNTAX:
+     * - SELECT e: Seleciona apenas os episódios (entidade Episodio)
+     * - FROM Serie s: Começa pela entidade Serie (alias 's')
+     * - JOIN s.episodios e: Faz JOIN com a lista de episódios (alias 'e')
+     *   - s.episodios: Atributo da entidade Serie (relacionamento @OneToMany)
+     * - WHERE e.titulo ILIKE %:trechoEpisodio%: Busca parcial case-insensitive
+     *   - ILIKE: Case-insensitive LIKE (PostgreSQL)
+     *   - %:trechoEpisodio%: Parâmetro nomeado com wildcards
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM episodios e
+     * JOIN series s ON e.serie_id = s.id
+     * WHERE LOWER(e.titulo) LIKE LOWER('%trecho%')
+     * 
+     * POR QUE USAR JOIN?
+     * - Busca episódios em TODAS as séries de uma vez
+     * - Retorna apenas episódios (não séries completas)
+     * - Query otimizada no banco de dados
+     * 
+     * DIFERENÇA: ILIKE vs LIKE
+     * - ILIKE: Case-insensitive (PostgreSQL específico)
+     * - LIKE: Case-sensitive
+     * - Para outros bancos, use: LOWER(e.titulo) LIKE LOWER(CONCAT('%', :trechoEpisodio, '%'))
+     * 
+     * @param trechoEpisodio Trecho do título do episódio
+     * @return Lista de episódios que contém o trecho no título
+     * 
+     * Exemplos de uso:
+     * - episodiosPorTrecho("pilot") → Todos os episódios com "pilot" no título
+     * - episodiosPorTrecho("finale") → Todos os episódios finais
+     */
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE e.titulo ILIKE %:trechoEpisodio%")
+    List<Episodio> episodiosPorTrecho(@Param("trechoEpisodio") String trechoEpisodio);
 
 }

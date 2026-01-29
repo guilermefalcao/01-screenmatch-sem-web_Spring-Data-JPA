@@ -312,4 +312,53 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
     @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s = :serie ORDER BY e.avaliacao DESC LIMIT 5")
     List<Episodio> topEpisodiosPorSerie(@Param("serie") Serie serie);
 
+    /**
+     * Busca episódios de uma série lançados a partir de um ano específico
+     * Usa JPQL com JOIN, WHERE e função YEAR() para filtrar por ano
+     * 
+     * JPQL SYNTAX:
+     * - SELECT e: Seleciona apenas os episódios (entidade Episodio)
+     * - FROM Serie s: Começa pela entidade Serie (alias 's')
+     * - JOIN s.episodios e: Faz JOIN com a lista de episódios (alias 'e')
+     *   - s.episodios: Atributo da entidade Serie (relacionamento @OneToMany)
+     * - WHERE s = :serie: Filtra por série específica (compara objeto)
+     * - AND YEAR(e.dataLancamento) >= :anoLancamento: Filtra por ano
+     *   - YEAR(): Função JPQL que extrai o ano de uma data (LocalDate)
+     *   - >=: Maior ou igual (episódios de 2020 em diante, por exemplo)
+     * - ORDER BY e.dataLancamento: Ordena por data (cronológico)
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM episodios e
+     * JOIN series s ON e.serie_id = s.id
+     * WHERE s.id = ?
+     * AND EXTRACT(YEAR FROM e.data_lancamento) >= ?
+     * ORDER BY e.data_lancamento
+     * 
+     * POR QUE USAR YEAR()?
+     * - Mais fácil para o usuário (digita apenas o ano: 2022)
+     * - Função portável (funciona em vários bancos)
+     * - Hibernate converte para EXTRACT(YEAR FROM ...) no PostgreSQL
+     * - Alternativa: Usar LocalDate.of(ano, 1, 1) e comparar datas completas
+     * 
+     * DIFERENÇA: YEAR() vs comparação de data completa
+     * - YEAR(e.dataLancamento) >= 2022: Mais simples, filtra por ano
+     * - e.dataLancamento >= '2022-01-01': Mais preciso, filtra por data exata
+     * 
+     * @param serie Série para buscar os episódios
+     * @param anoLancamento Ano mínimo de lançamento (ex: 2022)
+     * @return Lista de episódios lançados a partir do ano informado
+     * 
+     * Exemplos de uso:
+     * - episodiosPorSerieEAno(theBoysEntity, 2022) → Episódios de The Boys de 2022 em diante
+     * - episodiosPorSerieEAno(friendsEntity, 2000) → Episódios de Friends de 2000 em diante
+     * 
+     * VANTAGENS:
+     * ✅ Filtra por ano (interface amigável)
+     * ✅ Função YEAR() do JPQL (portável)
+     * ✅ Ordenação cronológica
+     * ✅ Query específica para uma série
+     */
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s = :serie AND YEAR(e.dataLancamento) >= :anoLancamento ORDER BY e.dataLancamento")
+    List<Episodio> episodiosPorSerieEAno(@Param("serie") Serie serie, @Param("anoLancamento") Integer anoLancamento);
+
 }

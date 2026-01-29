@@ -72,9 +72,10 @@ public class Principal {
                     8 - Filtrar séries
                     9 - Buscar episódio por trecho
                     10 - Top 5 episódios por série
+                    11 - Buscar episódios a partir de uma data
                     
-                    11 - Exercícios resolvidos
-                    12 - Testar Exercícios JPA (Produto, Categoria, Pedido)
+                    12 - Exercícios resolvidos
+                    13 - Testar Exercícios JPA (Produto, Categoria, Pedido)
 
                     0 - Sair
                     
@@ -116,9 +117,12 @@ public class Principal {
                     topEpisodiosPorSerie();
                     break;
                 case 11:
-                    ExerciciosResolvidos.executarTodos();
+                    buscarEpisodiosDepoisDeUmaData();
                     break;
                 case 12:
+                    ExerciciosResolvidos.executarTodos();
+                    break;
+                case 13:
                     testeExerciciosJPA.executar();
                     break;
                 case 0:
@@ -653,6 +657,92 @@ public class Principal {
                         e.getTitulo(),
                         e.getAvaliacao())
                 );
+                System.out.println();
+            }
+        } else {
+            System.out.println("❌ Série não encontrada!");
+        }
+    }
+
+    /**
+     * Método para buscar episódios lançados a partir de um ano específico
+     * Usa JPQL com JOIN, WHERE e comparação de datas
+     * 
+     * O QUE FAZ:
+     * 1. Reutiliza a série buscada anteriormente (serieBusca)
+     * 2. Se não houver série buscada, chama buscarSerieporTitulo()
+     * 3. Solicita ano limite ao usuário
+     * 4. Busca episódios lançados a partir daquele ano
+     * 5. Exibe os episódios formatados com data de lançamento
+     * 
+     * JPQL USADO:
+     * SELECT e FROM Serie s JOIN s.episodios e 
+     * WHERE s = :serie 
+     * AND YEAR(e.dataLancamento) >= :anoLancamento
+     * ORDER BY e.dataLancamento
+     * 
+     * EXPLICAÇÃO DA QUERY:
+     * - SELECT e: Seleciona apenas os episódios
+     * - FROM Serie s JOIN s.episodios e: JOIN entre série e episódios
+     * - WHERE s = :serie: Filtra por série específica
+     * - AND YEAR(e.dataLancamento) >= :anoLancamento: Filtra por ano
+     *   - YEAR(): Função JPQL que extrai o ano de uma data
+     *   - >=: Maior ou igual (episódios de 2020 em diante)
+     * - ORDER BY e.dataLancamento: Ordena por data (mais antigo para mais recente)
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM episodios e
+     * JOIN series s ON e.serie_id = s.id
+     * WHERE s.id = ?
+     * AND EXTRACT(YEAR FROM e.data_lancamento) >= ?
+     * ORDER BY e.data_lancamento
+     * 
+     * EXEMPLO DE USO:
+     * 1. Usuário escolhe opção 4 (buscar série) → "The Boys"
+     * 2. Usuário escolhe opção 11 (episódios a partir de uma data)
+     * 3. Usuário digita: 2022
+     * 4. Sistema exibe todos os episódios de The Boys lançados em 2022 ou depois
+     * 
+     * VANTAGENS:
+     * ✅ Filtra por ano (mais fácil que data completa)
+     * ✅ Função YEAR() do JPQL (portável entre bancos)
+     * ✅ Ordenação cronológica
+     * ✅ Reutiliza série já buscada
+     */
+    private void buscarEpisodiosDepoisDeUmaData() {
+        // 1. Verifica se já existe uma série buscada anteriormente
+        if (serieBusca == null || serieBusca.isEmpty()) {
+            buscarSerieporTitulo();
+        }
+        
+        // 2. Verifica se a série foi encontrada
+        if (serieBusca.isPresent()) {
+            // 3. Obtém a série do Optional
+            Serie serie = serieBusca.get();
+            
+            // 4. Solicita o ano limite ao usuário
+            System.out.println("Digite o ano limite de lançamento:");
+            var anoLancamento = leitura.nextInt();
+            leitura.nextLine(); // Limpa o buffer do scanner
+            
+            // 5. Busca episódios usando JPQL com filtro de ano
+            List<Episodio> episodiosAno = repositorio.episodiosPorSerieEAno(serie, anoLancamento);
+            
+            // 6. Verifica se encontrou episódios
+            if (episodiosAno.isEmpty()) {
+                System.out.println("❌ Nenhum episódio encontrado para a série " + serie.getTitulo() + " a partir de " + anoLancamento);
+            } else {
+                // 7. Exibe os episódios formatados
+                System.out.println("\n📅 Episódios de " + serie.getTitulo() + " a partir de " + anoLancamento + ":");
+                episodiosAno.forEach(e -> 
+                    System.out.printf("Temporada: %s | Episódio: %s - %s | Data: %s | Avaliação: %.1f%n",
+                        e.getTemporada(),
+                        e.getNumeroEpisodio(),
+                        e.getTitulo(),
+                        e.getDataLancamento(),
+                        e.getAvaliacao())
+                );
+                System.out.println("\nTotal de episódios encontrados: " + episodiosAno.size());
                 System.out.println();
             }
         } else {

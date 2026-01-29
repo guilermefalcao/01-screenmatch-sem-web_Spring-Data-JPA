@@ -58,10 +58,12 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ JPQL com JOIN para buscar episódios por trecho
 - ✅ JPQL com WHERE usando objeto (s = :serie)
 - ✅ Top 5 episódios por série com ORDER BY e LIMIT
+- ✅ Buscar episódios a partir de uma data com função YEAR()
+- ✅ 11 exercícios JPQL avançados (AVG, MAX, COUNT, GROUP BY, SIZE, nativeQuery)
 - ✅ Reutilização de variáveis de instância (serieBusca)
 - ✅ Otimização de buscas (banco vs memória)
 - ✅ Tratamento de dados nulos da API OMDB
-- ✅ Comparação: Streams vs Derived Queries vs JPQL
+- ✅ Comparação: Streams vs Derived Queries vs JPQL vs SQL Nativo
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -151,8 +153,9 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **8** - Filtrar séries por temporadas e avaliação
 - **9** - Buscar episódio por trecho (JPQL com JOIN)
 - **10** - Top 5 episódios por série (JPQL com ORDER BY)
-- **11** - Ver exercícios resolvidos (Aula 01)
-- **12** - Testar exercícios JPA (Produto, Categoria, Pedido)
+- **11** - Buscar episódios a partir de uma data (JPQL com YEAR)
+- **12** - Ver exercícios resolvidos (Aula 01)
+- **13** - Testar exercícios JPQL avançados (11 exercícios)
 - **0** - Sair
 
 ## 📝 Conceitos Aprendidos
@@ -191,10 +194,15 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **JPQL com JOIN** para buscar episódios
 - **JPQL com WHERE usando objeto** (s = :serie)
 - **ORDER BY + LIMIT** para top N episódios
+- **Função YEAR()** para filtrar por ano
+- **Funções agregadas** (AVG, MAX, COUNT)
+- **GROUP BY e HAVING** para agrupamentos
+- **Função SIZE()** para contar coleções
+- **SQL Nativo** com nativeQuery = true
 - **Reutilização de variáveis** entre métodos (serieBusca)
 - **Otimização**: Busca direta no banco vs lista em memória
 - **Tratamento de nulls** da API externa
-- **Comparação**: Derived Queries vs JPQL
+- **Comparação**: Derived Queries vs JPQL vs SQL Nativo
 
 ## 🔗 Links Úteis
 
@@ -210,6 +218,7 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 - **Readme_aulas.md** - Guia passo a passo de todas as aulas
 - **TESTE_TOP_EPISODIOS.md** - Guia de teste da opção 10 (Top 5 episódios)
+- **TESTE_EPISODIOS_POR_ANO.md** - Guia de teste da opção 11 (Episódios por ano)
 - **exerciciosjpa/README_EXERCICIOS_JPA.md** - Exercícios práticos de JPA
 - **exerciciosjpa/COMO_TESTAR.md** - Guia rápido de testes
 
@@ -217,4 +226,4 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 03 - Derived Query Methods e Consultas Avançadas
+**Última atualização:** Aula 03 - JPQL Avançado (11 Exercícios + Funções SQL)

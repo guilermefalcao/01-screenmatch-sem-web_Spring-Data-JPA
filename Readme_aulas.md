@@ -1429,9 +1429,526 @@ DELETE FROM series WHERE titulo IS NULL OR titulo = '';
 
 ---
 
+## 🔍 AULA 03 - Consultas JPQL Avançadas
+
+### O que é JPQL?
+
+**JPQL (Java Persistence Query Language)** é uma linguagem de consulta orientada a objetos para JPA.
+
+**Diferenças entre JPQL e SQL:**
+- **SQL:** Trabalha com tabelas e colunas
+- **JPQL:** Trabalha com entidades e atributos Java
+
+**Exemplo:**
+```java
+// SQL
+SELECT * FROM series WHERE titulo LIKE '%boys%';
+
+// JPQL
+SELECT s FROM Serie s WHERE s.titulo LIKE '%boys%';
+```
+
+**Quando usar JPQL:**
+- ✅ Queries complexas com JOIN
+- ✅ Funções agregadas (AVG, MAX, COUNT)
+- ✅ Subconsultas
+- ✅ Queries que Derived Methods não conseguem expressar
+
+---
+
+### 10. Buscar Episódio por Trecho (Opção 9)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca episódios por trecho do título usando JOIN
+
+**Passos:**
+
+1. **Adicionar método com @Query no repositório:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // JPQL com JOIN
+    // @Query: Define consulta JPQL personalizada
+    // SELECT e: Retorna episódios (não séries)
+    // FROM Serie s: Entidade Serie (alias s)
+    // JOIN s.episodios e: JOIN na lista de episódios
+    // WHERE e.titulo: Filtra por título do episódio
+    // ILIKE: Case-insensitive LIKE (PostgreSQL)
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE e.titulo ILIKE %:trechoEpisodio%")
+    List<Episodio> episodiosPorTrecho(String trechoEpisodio);
+}
+```
+
+**SQL gerado:**
+```sql
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE LOWER(e.titulo) LIKE LOWER('%trecho%');
+```
+
+2. **Usar no menu (Principal.java):**
+```java
+private void buscarEpisodioPorTrecho() {
+    System.out.println("Qual o nome do episódio para busca?");
+    var trechoEpisodio = leitura.nextLine();
+    
+    // Busca com JPQL JOIN
+    List<Episodio> episodiosEncontrados = repositorio.episodiosPorTrecho(trechoEpisodio);
+    
+    if (episodiosEncontrados.isEmpty()) {
+        System.out.println("❌ Nenhum episódio encontrado");
+    } else {
+        System.out.println("\n✅ Episódios encontrados:");
+        episodiosEncontrados.forEach(e ->
+            System.out.println("Série: " + e.getSerie().getTitulo() +
+                " - S" + e.getTemporada() + "E" + e.getNumeroEpisodio() +
+                " - " + e.getTitulo())
+        );
+    }
+}
+```
+
+**Conceitos aprendidos:**
+- @Query para JPQL personalizada
+- JOIN entre entidades
+- Retornar entidade diferente (Episodio, não Serie)
+- ILIKE para case-insensitive no PostgreSQL
+- Parâmetros nomeados (:trechoEpisodio)
+
+---
+
+### 11. Top 5 Episódios por Série (Opção 10)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca os 5 melhores episódios de uma série específica
+
+**Passos:**
+
+1. **Adicionar método com JPQL + ORDER BY + LIMIT:**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // JPQL com WHERE usando objeto + ORDER BY + LIMIT
+    // SELECT e: Retorna episódios
+    // FROM Serie s: Entidade Serie
+    // JOIN s.episodios e: JOIN na lista de episódios
+    // WHERE s = :serie: Filtra por objeto Serie completo
+    // AND e.avaliacao > 0.0: Ignora episódios sem avaliação
+    // ORDER BY e.avaliacao DESC: Ordena por avaliação (maior primeiro)
+    // LIMIT 5: Limita a 5 resultados
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s = :serie AND e.avaliacao > 0.0 ORDER BY e.avaliacao DESC LIMIT 5")
+    List<Episodio> topEpisodiosPorSerie(Serie serie);
+}
+```
+
+**SQL gerado:**
+```sql
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE s.id = ? AND e.avaliacao > 0.0 
+ORDER BY e.avaliacao DESC 
+LIMIT 5;
+```
+
+2. **Usar no menu com reutilização de variável:**
+```java
+private Serie serieBusca;  // Variável de instância (reutilizada)
+
+private void buscarTop5Episodios() {
+    // Busca série (reutiliza método)
+    buscarSerieporTitulo();
+    
+    // Verifica se série foi encontrada
+    if (serieBusca != null) {
+        // Busca top 5 episódios usando JPQL
+        List<Episodio> topEpisodios = repositorio.topEpisodiosPorSerie(serieBusca);
+        
+        if (topEpisodios.isEmpty()) {
+            System.out.println("❌ Nenhum episódio encontrado");
+        } else {
+            System.out.println("\n🏆 Top 5 episódios de " + serieBusca.getTitulo() + ":");
+            topEpisodios.forEach(e ->
+                System.out.println("S" + e.getTemporada() + "E" + e.getNumeroEpisodio() +
+                    " - " + e.getTitulo() + " - Avaliação: " + e.getAvaliacao())
+            );
+        }
+    }
+}
+
+private void buscarSerieporTitulo() {
+    System.out.println("Escolha uma serie pelo nome: ");
+    var nomeSerie = leitura.nextLine();
+    
+    Optional<Serie> serieBuscada = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+
+    if (serieBuscada.isPresent()) {
+        serieBusca = serieBuscada.get();  // Armazena na variável de instância
+        System.out.println("✅ Dados da série: " + serieBusca);
+    } else {
+        System.out.println("❌ Série não encontrada!");
+        serieBusca = null;
+    }
+}
+```
+
+**Conceitos aprendidos:**
+- WHERE com objeto completo (s = :serie)
+- ORDER BY + LIMIT em JPQL
+- Reutilização de variáveis de instância
+- Filtrar avaliações inválidas (> 0.0)
+- Composição de métodos
+
+---
+
+### 12. Buscar Episódios por Ano (Opção 11)
+**Arquivo:** `repository/SerieRepository.java`
+
+**O que faz:** Busca episódios de uma série a partir de um ano específico
+
+**Passos:**
+
+1. **Adicionar método com função YEAR():**
+```java
+public interface SerieRepository extends JpaRepository<Serie, Long> {
+    
+    // JPQL com função YEAR() para filtrar por ano
+    // SELECT e: Retorna episódios
+    // FROM Serie s: Entidade Serie
+    // JOIN s.episodios e: JOIN na lista de episódios
+    // WHERE s = :serie: Filtra por série
+    // AND YEAR(e.dataLancamento) >= :anoLancamento: Função YEAR() extrai ano da data
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s = :serie AND YEAR(e.dataLancamento) >= :anoLancamento")
+    List<Episodio> episodiosPorSerieEAno(Serie serie, int anoLancamento);
+}
+```
+
+**SQL gerado:**
+```sql
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE s.id = ? AND EXTRACT(YEAR FROM e.data_lancamento) >= ?;
+```
+
+2. **Usar no menu:**
+```java
+private void buscarEpisodiosPorAno() {
+    // Busca série (reutiliza método)
+    buscarSerieporTitulo();
+    
+    if (serieBusca != null) {
+        System.out.println("Digite o ano limite de lançamento: ");
+        var anoLancamento = leitura.nextInt();
+        leitura.nextLine();
+        
+        // Busca episódios usando JPQL com YEAR()
+        List<Episodio> episodiosAno = repositorio.episodiosPorSerieEAno(serieBusca, anoLancamento);
+        
+        if (episodiosAno.isEmpty()) {
+            System.out.println("❌ Nenhum episódio encontrado a partir de " + anoLancamento);
+        } else {
+            System.out.println("\n✅ Episódios de " + serieBusca.getTitulo() + " a partir de " + anoLancamento + ":");
+            episodiosAno.forEach(e ->
+                System.out.println("S" + e.getTemporada() + "E" + e.getNumeroEpisodio() +
+                    " - " + e.getTitulo() + " (" + e.getDataLancamento().getYear() + ")")
+            );
+        }
+    }
+}
+```
+
+**Conceitos aprendidos:**
+- Função YEAR() em JPQL
+- Filtrar por ano de data
+- Múltiplos parâmetros em @Query
+- Reutilização de serieBusca
+
+---
+
+### 13. Exercícios JPQL Avançados (11 Exercícios)
+**Pasta:** `exerciciosjpa/`
+
+**O que faz:** Implementa 11 exercícios avançados de JPQL
+
+**Estrutura atualizada:**
+```
+exerciciosjpa/
+├── repository/
+│   ├── ProdutoRepository.java (+ 6 JPQL queries)
+│   └── PedidoRepository.java (+ 5 JPQL queries)
+└── TesteJPQL.java (novo - menu interativo)
+```
+
+**ProdutoRepository - 6 JPQL Queries:**
+
+```java
+public interface ProdutoRepository extends JpaRepository<Produto, Long> {
+    
+    // ===== FUNÇÕES AGREGADAS =====
+    
+    // 1. Média de preços por categoria
+    @Query("SELECT AVG(p.preco) FROM Produto p WHERE p.categoria.nome = :categoriaNome")
+    Double calcularPrecoMedioPorCategoria(String categoriaNome);
+    
+    // 2. Produto mais caro
+    @Query("SELECT p FROM Produto p WHERE p.preco = (SELECT MAX(p2.preco) FROM Produto p2)")
+    Optional<Produto> encontrarProdutoMaisCaro();
+    
+    // 3. Contar produtos por categoria (GROUP BY)
+    @Query("SELECT p.categoria.nome, COUNT(p) FROM Produto p GROUP BY p.categoria.nome")
+    List<Object[]> contarProdutosPorCategoria();
+    
+    // ===== RELACIONAMENTOS =====
+    
+    // 4. Produtos com pedidos (SIZE > 0)
+    @Query("SELECT p FROM Produto p WHERE SIZE(p.pedidos) > 0")
+    List<Produto> encontrarProdutosComPedidos();
+    
+    // 5. Produtos sem pedidos (SIZE = 0)
+    @Query("SELECT p FROM Produto p WHERE SIZE(p.pedidos) = 0")
+    List<Produto> encontrarProdutosSemPedidos();
+    
+    // ===== SQL NATIVO =====
+    
+    // 6. Produtos com preço acima da média (SQL nativo)
+    @Query(value = "SELECT * FROM produtos WHERE valor > (SELECT AVG(valor) FROM produtos)", 
+           nativeQuery = true)
+    List<Produto> encontrarProdutosAcimaDaMedia();
+}
+```
+
+**PedidoRepository - 5 JPQL Queries:**
+
+```java
+public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    
+    // ===== FUNÇÕES AGREGADAS =====
+    
+    // 7. Total de pedidos por mês (GROUP BY)
+    @Query("SELECT MONTH(p.data), COUNT(p) FROM Pedido p GROUP BY MONTH(p.data) ORDER BY MONTH(p.data)")
+    List<Object[]> contarPedidosPorMes();
+    
+    // 8. Pedidos com mais de N produtos (HAVING)
+    @Query("SELECT p FROM Pedido p WHERE SIZE(p.produtos) > :quantidade")
+    List<Pedido> encontrarPedidosComMaisDeProdutos(int quantidade);
+    
+    // ===== RELACIONAMENTOS =====
+    
+    // 9. Pedidos de uma categoria específica (JOIN)
+    @Query("SELECT DISTINCT p FROM Pedido p JOIN p.produtos prod WHERE prod.categoria.nome = :categoriaNome")
+    List<Pedido> encontrarPedidosPorCategoria(String categoriaNome);
+    
+    // 10. Pedidos com produto específico (JOIN)
+    @Query("SELECT p FROM Pedido p JOIN p.produtos prod WHERE prod.nome = :nomeProduto")
+    List<Pedido> encontrarPedidosComProduto(String nomeProduto);
+    
+    // ===== SQL NATIVO =====
+    
+    // 11. Pedidos do último mês (SQL nativo)
+    @Query(value = "SELECT * FROM pedidos WHERE data >= CURRENT_DATE - INTERVAL '30 days'", 
+           nativeQuery = true)
+    List<Pedido> encontrarPedidosUltimoMes();
+}
+```
+
+**TesteJPQL - Menu Interativo:**
+
+```java
+@Component
+public class TesteJPQL {
+    @Autowired private ProdutoRepository produtoRepository;
+    @Autowired private PedidoRepository pedidoRepository;
+    
+    public void executarTestes() {
+        // Menu com 4 categorias:
+        // 1 - Funções Agregadas (AVG, MAX, COUNT, GROUP BY)
+        // 2 - Relacionamentos (SIZE, JOIN)
+        // 3 - SQL Nativo (nativeQuery = true)
+        // 4 - Executar todos os testes
+        
+        // Exemplos de saída:
+        // Preço médio: R$ 2.450,00
+        // Produto mais caro: Notebook Dell - R$ 3.500,00
+        // Eletrônicos: 3 produtos
+        // Produtos com pedidos: [Notebook, Monitor]
+        // Pedidos em Janeiro: 5
+    }
+}
+```
+
+**Como testar:**
+1. Menu Principal → Opção 13 (Exercícios JPQL)
+2. Escolha categoria de teste (1-4)
+3. Veja consultas JPQL sendo executadas
+
+**Conceitos aprendidos:**
+- **Funções agregadas:** AVG(), MAX(), COUNT()
+- **GROUP BY:** Agrupar resultados
+- **HAVING:** Filtrar grupos
+- **SIZE():** Contar elementos de coleção
+- **DISTINCT:** Remover duplicatas
+- **Subconsultas:** SELECT dentro de SELECT
+- **SQL Nativo:** nativeQuery = true
+- **MONTH():** Extrair mês de data
+- **INTERVAL:** Operações com datas
+- **Object[]:** Retorno de múltiplas colunas
+
+---
+
+## 📊 Comparação: Derived Queries vs JPQL vs SQL Nativo
+
+| Aspecto | Derived Queries | JPQL | SQL Nativo |
+|---------|----------------|------|------------|
+| **Sintaxe** | Nome do método | Orientada a objetos | SQL puro |
+| **Complexidade** | ✅ Simples | ⚠️ Média | ❌ Complexa |
+| **Portabilidade** | ✅ Total | ✅ Total | ❌ Depende do banco |
+| **Flexibilidade** | ❌ Limitada | ✅ Alta | ✅ Total |
+| **Type-safe** | ✅ Sim | ⚠️ Parcial | ❌ Não |
+| **Quando usar** | Queries simples | Queries complexas | Otimizações específicas |
+
+**Exemplos:**
+
+```java
+// Derived Query - Simples e direto
+List<Serie> findByGenero(Categoria categoria);
+
+// JPQL - Complexo com JOIN
+@Query("SELECT e FROM Serie s JOIN s.episodios e WHERE e.titulo ILIKE %:trecho%")
+List<Episodio> episodiosPorTrecho(String trecho);
+
+// SQL Nativo - Funções específicas do PostgreSQL
+@Query(value = "SELECT * FROM series WHERE data >= CURRENT_DATE - INTERVAL '30 days'", 
+       nativeQuery = true)
+List<Serie> seriesRecentes();
+```
+
+---
+
+## 📝 Funções JPQL Úteis
+
+### Funções de String:
+- `UPPER(s.titulo)` - Maiúsculas
+- `LOWER(s.titulo)` - Minúsculas
+- `CONCAT(s.titulo, ' - ', s.genero)` - Concatenar
+- `SUBSTRING(s.titulo, 1, 10)` - Substring
+- `LENGTH(s.titulo)` - Tamanho
+
+### Funções de Data:
+- `YEAR(e.dataLancamento)` - Extrair ano
+- `MONTH(e.dataLancamento)` - Extrair mês
+- `DAY(e.dataLancamento)` - Extrair dia
+- `CURRENT_DATE` - Data atual
+- `CURRENT_TIMESTAMP` - Data/hora atual
+
+### Funções Agregadas:
+- `AVG(p.preco)` - Média
+- `MAX(p.preco)` - Máximo
+- `MIN(p.preco)` - Mínimo
+- `SUM(p.preco)` - Soma
+- `COUNT(p)` - Contagem
+
+### Funções de Coleção:
+- `SIZE(s.episodios)` - Tamanho da lista
+- `IS EMPTY` - Lista vazia
+- `MEMBER OF` - Pertence à lista
+
+---
+
+## 🔍 Verificar no DBeaver - JPQL
+
+### Queries equivalentes às JPQL:
+
+```sql
+-- Episódios por trecho (Opção 9)
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE LOWER(e.titulo) LIKE LOWER('%trecho%');
+
+-- Top 5 episódios por série (Opção 10)
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE s.id = 1 AND e.avaliacao > 0.0 
+ORDER BY e.avaliacao DESC 
+LIMIT 5;
+
+-- Episódios por ano (Opção 11)
+SELECT e.* 
+FROM series s 
+INNER JOIN episodios e ON s.id = e.serie_id 
+WHERE s.id = 1 AND EXTRACT(YEAR FROM e.data_lancamento) >= 2020;
+
+-- Preço médio por categoria
+SELECT c.nome, AVG(p.valor) 
+FROM produtos p 
+JOIN categorias c ON p.categoria_id = c.id 
+GROUP BY c.nome;
+
+-- Produtos com pedidos
+SELECT p.*, COUNT(pp.pedido_id) AS total_pedidos
+FROM produtos p
+LEFT JOIN pedido_produto pp ON p.id = pp.produto_id
+GROUP BY p.id
+HAVING COUNT(pp.pedido_id) > 0;
+
+-- Pedidos por mês
+SELECT EXTRACT(MONTH FROM data) AS mes, COUNT(*) AS total
+FROM pedidos
+GROUP BY EXTRACT(MONTH FROM data)
+ORDER BY mes;
+```
+
+---
+
+## 📝 Resumo da Aula 03 - JPQL Completo
+
+### ✅ O que você aprendeu:
+
+1. **Derived Query Methods (Parte 1)**
+   - 17 tipos de consultas automáticas
+   - Nomenclatura padronizada
+   - Busca, filtros, ordenação, contagem
+
+2. **JPQL - Java Persistence Query Language (Parte 2)**
+   - @Query para consultas personalizadas
+   - JOIN entre entidades
+   - WHERE com objetos
+   - ORDER BY + LIMIT
+   - Funções: YEAR(), MONTH(), AVG(), MAX(), COUNT()
+
+3. **Funções Agregadas**
+   - AVG() para médias
+   - MAX() e MIN() para extremos
+   - COUNT() para contagem
+   - GROUP BY para agrupamentos
+   - HAVING para filtrar grupos
+
+4. **Relacionamentos em JPQL**
+   - JOIN para navegar entre entidades
+   - SIZE() para contar coleções
+   - DISTINCT para remover duplicatas
+   - Queries em relacionamentos N:M
+
+5. **SQL Nativo**
+   - nativeQuery = true
+   - Funções específicas do banco
+   - INTERVAL para datas
+   - Otimizações avançadas
+
+6. **Boas Práticas**
+   - Reutilização de variáveis (serieBusca)
+   - Tratamento de resultados vazios
+   - Filtrar dados inválidos (avaliacao > 0.0)
+   - Comparação: Derived vs JPQL vs SQL Nativo
+
+---
+
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 03 - Derived Query Methods e Consultas Avançadas
+**Última atualização:** Aula 03 - JPQL Avançado (Derived Queries + JPQL + SQL Nativo)
 
 ---
 

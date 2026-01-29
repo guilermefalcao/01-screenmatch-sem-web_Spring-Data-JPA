@@ -125,7 +125,8 @@ public class Episodio {
 
     @Override
     public String toString() {
-        return "temporada=" + temporada +
+        return "serie=" + (serie != null ? serie.getTitulo() : "N/A") +
+                ", temporada=" + temporada +
                 ", titulo='" + titulo + '\'' +
                 ", numeroEpisodio=" + numeroEpisodio +
                 ", avaliacao=" + avaliacao +

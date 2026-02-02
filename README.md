@@ -17,6 +17,19 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 
 ## ✨ Funcionalidades Implementadas
 
+### Aula 04 - Desenvolvimento Web com Spring Boot
+
+- ✅ Configuração do Spring Boot Web (spring-boot-starter-web)
+- ✅ Servidor Tomcat embutido na porta 8080
+- ✅ Criação de Controllers REST (@RestController)
+- ✅ Primeiro endpoint GET com @GetMapping
+- ✅ Captura de parâmetros com @RequestParam
+- ✅ Arquitetura MVC (Model-View-Controller)
+- ✅ Separação de camadas (Controller, Service, Repository)
+- ✅ Backup da versão console (ScreenmatchApplicationSemWeb)
+- ✅ Configuração de classe principal no pom.xml
+- ✅ Testes de endpoints via navegador
+
 ### Aula 01 - Modelando a aplicação
 
 - ✅ Menu interativo com loop para buscar múltiplas séries
@@ -69,6 +82,8 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 
 - Java 17
 - Spring Boot 3.1.1
+- **Spring Boot Web** (API REST)
+- **Apache Tomcat** (servidor embutido)
 - Spring Data JPA (persistência)
 - PostgreSQL (banco de dados)
 - Hibernate (ORM)
@@ -81,6 +96,8 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 
 ```
 src/main/java/br/com/alura/screenmatch/
+├── controller/                          ⭐ NOVO - Camada Web
+│   └── SerieController.java            (endpoints REST)
 ├── model/
 │   ├── Categoria.java (enum de gêneros)
 │   ├── DadosSerie.java (record para API)
@@ -96,23 +113,14 @@ src/main/java/br/com/alura/screenmatch/
 │       ├── ConsultaMyMemory.java
 │       ├── DadosTraducao.java
 │       └── DadosResposta.java
-├── exercicios/
-│   ├── ExerciciosResolvidos.java
-│   ├── Mes.java (enum)
-│   ├── Moeda.java (enum)
-│   └── CodigoErro.java (enum)
 ├── exerciciosjpa/
 │   ├── model/
-│   │   ├── Produto.java
-│   │   ├── Categoria.java
-│   │   └── Pedido.java
 │   ├── repository/
-│   │   ├── ProdutoRepository.java
-│   │   ├── CategoriaRepository.java
-│   │   └── PedidoRepository.java
 │   └── TesteExerciciosJPA.java
-└── principal/
-    └── Principal.java (menu)
+├── principal/
+│   └── Principal.java (menu console - backup)
+├── ScreenmatchApplication.java          ⭐ ATUALIZADO - Versão Web
+└── ScreenmatchApplicationSemWeb.java    (backup versão console)
 ```
 
 ## 🚀 Como Executar
@@ -133,7 +141,7 @@ DB_USERNAME=postgres
 DB_PASSWORD=sua-senha
 ```
 
-### 2. Executar a aplicação
+### 2. Executar a aplicação WEB
 
 ```bash
 mvn spring-boot:run
@@ -141,7 +149,22 @@ mvn spring-boot:run
 
 Ou execute a classe `ScreenmatchApplication` pela IDE.
 
-### 3. Navegar pelo menu
+**Servidor iniciará em:** http://localhost:8080
+
+### 3. Testar endpoints REST
+
+**Navegador ou Postman:**
+- http://localhost:8080/series → "Nenhuma série informada"
+- http://localhost:8080/series?nomedaserie=Lost → "Série informada: Lost"
+
+### 4. Versão Console (Backup)
+
+Para usar a versão console com menu interativo:
+1. Descomente `@SpringBootApplication` em `ScreenmatchApplicationSemWeb`
+2. Comente a classe `ScreenmatchApplication`
+3. Ou altere `<mainClass>` no `pom.xml`
+
+### 5. Menu Console (versão antiga)
 
 - **1** - Buscar séries na API OMDB
 - **2** - Buscar episódios de uma série
@@ -183,6 +206,18 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 - **Fetch types (EAGER vs LAZY)**
 - **Relacionamentos bidirecionais (mappedBy)**
 - **Relacionamento N:M com @ManyToMany e @JoinTable**
+
+### Aula 04:
+- Configuração de aplicação web com Spring Boot
+- Dependência spring-boot-starter-web
+- Servidor Tomcat embutido
+- Arquitetura MVC (Model-View-Controller)
+- Controllers REST com @RestController
+- Mapeamento de rotas com @GetMapping
+- Captura de parâmetros com @RequestParam
+- Diferença entre aplicação console e web
+- Configuração de classe principal no Maven
+- Separação de camadas (Controller, Service, Repository)
 
 ### Aula 03:
 - **Derived Query Methods** (Spring Data JPA gera SQL automaticamente)
@@ -226,4 +261,4 @@ Ou execute a classe `ScreenmatchApplication` pela IDE.
 
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
-**Última atualização:** Aula 03 - JPQL Avançado (11 Exercícios + Funções SQL)
+**Última atualização:** Aula 04 - Desenvolvimento Web (API REST com Spring Boot)

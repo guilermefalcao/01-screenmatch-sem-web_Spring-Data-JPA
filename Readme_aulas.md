@@ -2279,3 +2279,427 @@ public class TesteDerivedQueries {
    - Boas práticas
 
 ---
+
+
+## 🌐 AULA 04 - Desenvolvimento Web com Spring Boot
+
+### O que é uma Aplicação Web?
+
+**Aplicação Console (Aulas 01-03):**
+- Interface de linha de comando (terminal)
+- Usuário interage via Scanner
+- Executa e finaliza
+- Uso: Scripts, ferramentas CLI, processamento batch
+
+**Aplicação Web (Aula 04):**
+- Interface HTTP (navegador, Postman, apps mobile)
+- Usuário faz requisições HTTP
+- Servidor fica "no ar" aguardando requisições
+- Uso: APIs REST, sites, microserviços
+
+---
+
+### 1. Configuração do Spring Boot Web
+**Arquivo:** `pom.xml`
+
+**O que faz:** Adiciona dependência para criar aplicações web
+
+**Passos:**
+
+1. **Adicionar dependência spring-boot-starter-web:**
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+**O que essa dependência traz:**
+- ✅ **Apache Tomcat** (servidor web embutido)
+- ✅ **Spring MVC** (framework para criar controllers)
+- ✅ **Jackson** (conversão automática JSON ↔ Java)
+- ✅ **Validação** (Bean Validation)
+- ✅ **Recursos web** (servir arquivos estáticos)
+
+**Porta padrão:** 8080 (http://localhost:8080)
+
+**Conceitos aprendidos:**
+- Starters do Spring Boot
+- Servidor embutido vs servidor externo
+- Configuração zero (convenção sobre configuração)
+
+---
+
+### 2. Transformar Aplicação Console em Web
+**Arquivos:** `ScreenmatchApplication.java`, `ScreenmatchApplicationSemWeb.java`
+
+**O que mudou:** Removeu CommandLineRunner para virar aplicação web
+
+**ANTES (Console):**
+```java
+@SpringBootApplication
+public class ScreenmatchApplication implements CommandLineRunner {
+    
+    @Autowired
+    private SerieRepository repositorio;
+    
+    @Override
+    public void run(String... args) {
+        Principal principal = new Principal(repositorio);
+        principal.exibeMenu();  // Menu interativo
+    }
+}
+```
+
+**Problemas da versão console:**
+- ❌ Executa e finaliza
+- ❌ Apenas um usuário por vez
+- ❌ Interface limitada (terminal)
+- ❌ Não escalável
+
+**AGORA (Web):**
+```java
+@SpringBootApplication
+public class ScreenmatchApplication {
+    
+    public static void main(String[] args) {
+        SpringApplication.run(ScreenmatchApplication.class, args);
+        // Inicia servidor Tomcat na porta 8080
+        // Fica aguardando requisições HTTP
+    }
+    
+    // NÃO há mais método run()!
+    // Lógica agora está nos CONTROLLERS
+}
+```
+
+**Vantagens da versão web:**
+- ✅ Servidor fica "no ar" 24/7
+- ✅ Múltiplos usuários simultâneos
+- ✅ Acesso via navegador/app mobile
+- ✅ Escalável (pode adicionar mais servidores)
+
+**Backup da versão console:**
+```java
+// ScreenmatchApplicationSemWeb.java
+// @SpringBootApplication  // COMENTADO para não conflitar
+public class ScreenmatchApplicationSemWeb implements CommandLineRunner {
+    // Código original mantido como backup
+}
+```
+
+**Conceitos aprendidos:**
+- CommandLineRunner vs aplicação web
+- Ciclo de vida da aplicação
+- Servidor HTTP vs execução única
+
+---
+
+### 3. Configurar Classe Principal no Maven
+**Arquivo:** `pom.xml`
+
+**Problema:** Maven encontrou duas classes com @SpringBootApplication
+
+**Erro:**
+```
+Unable to find a single main class from the following candidates:
+[ScreenmatchApplicationSemWeb, ScreenmatchApplication]
+```
+
+**Solução: Especificar qual classe é a principal**
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+                <!-- Define qual classe é a principal (versão WEB) -->
+                <mainClass>br.com.alura.screenmatch.ScreenmatchApplication</mainClass>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**Conceitos aprendidos:**
+- Configuração do Maven
+- Resolução de conflitos
+- Classe principal (main class)
+
+---
+
+### 4. Arquitetura MVC (Model-View-Controller)
+
+**O que é MVC?**
+
+Padrão de arquitetura que separa aplicação em 3 camadas:
+
+```
+┌─────────────────────────────────────────────┐
+│              CLIENTE (Navegador)            │
+│         http://localhost:8080/series        │
+└─────────────────┬───────────────────────────┘
+                  │ HTTP Request
+                  ↓
+┌─────────────────────────────────────────────┐
+│         CONTROLLER (SerieController)        │
+│  - Recebe requisições HTTP                  │
+│  - Valida dados de entrada                  │
+│  - Chama Service                            │
+│  - Retorna resposta HTTP                    │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│         SERVICE (SerieService)              │
+│  - Lógica de negócio                        │
+│  - Regras da aplicação                      │
+│  - Chama Repository                         │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│      REPOSITORY (SerieRepository)           │
+│  - Acesso ao banco de dados                 │
+│  - Queries JPA/JPQL                         │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│         MODEL (Serie, Episodio)             │
+│  - Entidades JPA                            │
+│  - Representam tabelas do banco             │
+└─────────────────────────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│         DATABASE (PostgreSQL)               │
+│  - Tabelas: series, episodios               │
+└─────────────────────────────────────────────┘
+```
+
+**Responsabilidades:**
+
+| Camada | Responsabilidade | Exemplo |
+|--------|------------------|---------|
+| **Controller** | Receber requisições HTTP | @GetMapping("/series") |
+| **Service** | Lógica de negócio | Validar, calcular, processar |
+| **Repository** | Acesso ao banco | findAll(), save() |
+| **Model** | Representar dados | @Entity Serie |
+
+**Conceitos aprendidos:**
+- Separação de responsabilidades
+- Arquitetura em camadas
+- Baixo acoplamento, alta coesão
+
+---
+
+### 5. Criar Primeiro Controller
+**Arquivo:** `controller/SerieController.java`
+
+**O que faz:** Cria endpoint REST para receber requisições HTTP
+
+**Passos:**
+
+1. **Criar classe com @RestController:**
+```java
+package br.com.alura.screenmatch.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+@RestController  // Marca como controller REST
+public class SerieController {
+    
+    @GetMapping("/series")  // Mapeia GET http://localhost:8080/series
+    public String obterSeries(@RequestParam(required = false) String nomedaserie) {
+        if (nomedaserie == null) {
+            return "Nenhuma série informada";
+        }
+        return "Série informada: " + nomedaserie;
+    }
+}
+```
+
+**Anotações:**
+
+| Anotação | Função |
+|----------|--------|
+| `@RestController` | Combina @Controller + @ResponseBody (retorna dados, não HTML) |
+| `@GetMapping("/series")` | Mapeia requisição GET para método Java |
+| `@RequestParam` | Captura parâmetro da URL (?nomedaserie=Lost) |
+| `required = false` | Parâmetro é opcional |
+
+**Fluxo de requisição:**
+
+```
+1. Cliente: GET http://localhost:8080/series?nomedaserie=Lost
+   ↓
+2. Tomcat recebe requisição HTTP
+   ↓
+3. Spring identifica @GetMapping("/series")
+   ↓
+4. Spring chama obterSeries("Lost")
+   ↓
+5. Método retorna: "Série informada: Lost"
+   ↓
+6. Spring converte para HTTP Response
+   ↓
+7. Cliente recebe: HTTP 200 OK
+   Body: "Série informada: Lost"
+```
+
+**Conceitos aprendidos:**
+- @RestController vs @Controller
+- Mapeamento de rotas
+- Captura de parâmetros
+- Retorno automático de dados
+
+---
+
+### 6. Testar Endpoint no Navegador
+
+**Como testar:**
+
+1. **Iniciar aplicação:**
+```bash
+mvn spring-boot:run
+```
+
+**Console mostrará:**
+```
+Tomcat started on port(s): 8080 (http)
+Started ScreenmatchApplication in 2.5 seconds
+```
+
+2. **Abrir navegador:**
+
+**Teste 1 - Sem parâmetro:**
+```
+http://localhost:8080/series
+```
+**Resposta:**
+```
+Nenhuma série informada
+```
+
+**Teste 2 - Com parâmetro:**
+```
+http://localhost:8080/series?nomedaserie=Breaking Bad
+```
+**Resposta:**
+```
+Série informada: Breaking Bad
+```
+
+**Teste 3 - Múltiplos parâmetros (futuro):**
+```
+http://localhost:8080/series?nomedaserie=Lost&temporada=1
+```
+
+**Ferramentas de teste:**
+- ✅ **Navegador** (Chrome, Firefox) - Simples para GET
+- ✅ **Postman** - Completo (GET, POST, PUT, DELETE)
+- ✅ **cURL** - Linha de comando
+- ✅ **Thunder Client** (VS Code) - Extensão
+
+**Conceitos aprendidos:**
+- Testar APIs REST
+- Query parameters
+- HTTP status codes (200 OK)
+- Ferramentas de teste
+
+---
+
+### 7. Diferença: Aplicação Console vs Web
+
+| Aspecto | Console (Aulas 01-03) | Web (Aula 04) |
+|---------|----------------------|---------------|
+| **Interface** | Terminal (Scanner) | HTTP (navegador/Postman) |
+| **Execução** | Roda e finaliza | Fica "no ar" |
+| **Usuários** | Um por vez | Múltiplos simultâneos |
+| **Acesso** | Local (mesmo PC) | Remoto (rede/internet) |
+| **Entrada** | Scanner.nextLine() | @RequestParam, @RequestBody |
+| **Saída** | System.out.println() | return (JSON/texto) |
+| **Escalabilidade** | Limitada | Alta (load balancer) |
+| **Uso** | Scripts, batch | APIs, sites, apps |
+
+**Exemplo prático:**
+
+**Console:**
+```java
+System.out.println("Digite o nome da série:");
+String nome = scanner.nextLine();
+System.out.println("Série: " + nome);
+```
+
+**Web:**
+```java
+@GetMapping("/series")
+public String obterSeries(@RequestParam String nome) {
+    return "Série: " + nome;
+}
+```
+
+**Conceitos aprendidos:**
+- Paradigmas de aplicação
+- Quando usar cada tipo
+- Escalabilidade e concorrência
+
+---
+
+## 📊 Resumo da Aula 04
+
+### ✅ O que você aprendeu:
+
+1. **Configuração Web**
+   - Dependência spring-boot-starter-web
+   - Servidor Tomcat embutido
+   - Porta 8080 padrão
+
+2. **Transformação Console → Web**
+   - Remover CommandLineRunner
+   - Remover método run()
+   - Criar Controllers
+
+3. **Arquitetura MVC**
+   - Separação em camadas
+   - Controller, Service, Repository, Model
+   - Responsabilidades de cada camada
+
+4. **Controllers REST**
+   - @RestController
+   - @GetMapping
+   - @RequestParam
+   - Retorno automático de dados
+
+5. **Testes**
+   - Navegador para GET
+   - Postman para APIs completas
+   - Query parameters
+
+6. **Boas Práticas**
+   - Backup da versão console
+   - Configuração de classe principal
+   - Separação de responsabilidades
+
+---
+
+## 🔜 Próximas Aulas
+
+- [ ] Retornar JSON (List<Serie>)
+- [ ] Injetar SerieRepository no Controller
+- [ ] Criar mais endpoints (top5, buscar por ID)
+- [ ] DTOs (Data Transfer Objects)
+- [ ] Tratamento de erros (@ExceptionHandler)
+- [ ] CORS (Cross-Origin Resource Sharing)
+- [ ] Conectar com front-end
+
+---
+
+**Desenvolvido por:** Guilherme Falcão  
+**Curso:** Alura - Formação Avançando com Java  
+**Última atualização:** Aula 04 - Desenvolvimento Web (Spring Boot + REST)

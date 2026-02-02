@@ -25,7 +25,7 @@
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
 		<dependency>
@@ -66,6 +66,10 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- Define qual classe é a principal (versão WEB) -->
+					<mainClass>br.com.alura.screenmatch.ScreenmatchApplication</mainClass>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

@@ -23,7 +23,9 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Spring Boot DevTools para hot reload automático
 - ✅ Servidor Tomcat embutido na porta 8080
 - ✅ Criação de Controllers REST (@RestController)
-- ✅ Endpoints GET com @GetMapping (/series, /inicio)
+- ✅ Endpoints GET com @GetMapping (/series, /series/{id}, /series/top5, /series/lancamentos)
+- ✅ @PathVariable para capturar ID da URL
+- ✅ @RequestMapping para prefixo de rotas
 - ✅ DTOs (Data Transfer Objects) - SerieDTO
 - ✅ Conversão Serie → SerieDTO com stream().map()
 - ✅ @JsonIgnore para evitar loop infinito de serialização
@@ -31,6 +33,9 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Autorização de origens (allowedOrigins)
 - ✅ Arquitetura MVC (Model-View-Controller)
 - ✅ Separação de camadas (Controller, Service, Repository)
+- ✅ Service layer (SerieService) para lógica de negócio
+- ✅ Método privado converteDados() para evitar duplicação (DRY)
+- ✅ Busca por ID com Optional e tratamento de null
 - ✅ Backup da versão console (ScreenmatchApplicationSemWeb)
 - ✅ Configuração de classe principal no pom.xml
 - ✅ Testes de endpoints via navegador e Postman
@@ -218,7 +223,8 @@ Para usar a versão console com menu interativo:
 - Servidor Tomcat embutido
 - Arquitetura MVC (Model-View-Controller)
 - Controllers REST com @RestController
-- Mapeamento de rotas com @GetMapping
+- Mapeamento de rotas com @GetMapping e @RequestMapping
+- @PathVariable para capturar parâmetros da URL
 - DTOs (Data Transfer Objects) para serialização
 - @JsonIgnore para evitar loop infinito
 - CORS (Cross-Origin Resource Sharing)
@@ -226,6 +232,10 @@ Para usar a versão console com menu interativo:
 - Diferença entre aplicação console e web
 - Configuração de classe principal no Maven
 - Separação de camadas (Controller, Service, Repository)
+- Service layer para lógica de negócio e conversões
+- Princípio DRY (Don't Repeat Yourself) com métodos privados
+- Busca por ID com Optional<T> e tratamento de null
+- Baixo acoplamento e alta coesão
 
 ### Aula 03:
 - **Derived Query Methods** (Spring Data JPA gera SQL automaticamente)

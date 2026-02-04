@@ -358,7 +358,49 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
      * ✅ Ordenação cronológica
      * ✅ Query específica para uma série
      */
+    /**
+     * Busca episódios de uma série lançados a partir de um ano específico
+     * Usa JPQL com JOIN, WHERE e função YEAR() para filtrar por ano
+     * 
+     * @param serie Série para buscar os episódios
+     * @param anoLancamento Ano mínimo de lançamento (ex: 2022)
+     * @return Lista de episódios lançados a partir do ano informado
+     */
     @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s = :serie AND YEAR(e.dataLancamento) >= :anoLancamento ORDER BY e.dataLancamento")
     List<Episodio> episodiosPorSerieEAno(@Param("serie") Serie serie, @Param("anoLancamento") Integer anoLancamento);
+
+    /**
+     * Busca Top 5 séries com episódios mais recentes (VERSÃO CORRIGIDA)
+     * 
+     * PROBLEMA DA DERIVED QUERY:
+     * - findTop5ByOrderByEpisodiosDataLancamentoDesc() pode retornar MENOS de 5 séries
+     * - Se os 5 episódios mais recentes forem da MESMA série, retorna apenas 1 série
+     * - LEFT JOIN pega os 5 primeiros episódios, não 5 séries distintas
+     * 
+     * SOLUÇÃO COM JPQL:
+     * - INNER JOIN: Garante que série tem episódios
+     * - GROUP BY s: Agrupa por série (garante séries distintas)
+     * - MAX(e.dataLancamento): Pega a data do episódio mais recente de cada série
+     * - ORDER BY MAX(...) DESC: Ordena séries pela data do episódio mais recente
+     * - LIMIT 5: Retorna 5 SÉRIES distintas
+     * 
+     * SQL GERADO:
+     * SELECT s.* FROM series s
+     * INNER JOIN episodios e ON s.id = e.serie_id
+     * GROUP BY s.id
+     * ORDER BY MAX(e.data_lancamento) DESC
+     * LIMIT 5
+     * 
+     * DIFERENÇA:
+     * - Derived Query: Pode retornar 1-5 séries (depende dos dados)
+     * - JPQL com GROUP BY: SEMPRE retorna 5 séries distintas
+     * 
+     * @return Lista com 5 séries distintas (episódios mais recentes)
+     */
+    @Query("SELECT s FROM Serie s " +
+            "JOIN s.episodios e " +
+            "GROUP BY s " +
+            "ORDER BY MAX(e.dataLancamento) DESC LIMIT 5")
+    List<Serie> encontrarEpisodiosMaisRecentes();
 
 }

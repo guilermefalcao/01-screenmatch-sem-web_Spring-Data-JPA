@@ -3132,3 +3132,437 @@ http://localhost:8080/series
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
 **Última atualização:** Aula 04 - Desenvolvimento Web (Completa)
+
+
+## 🌐 AULA 04 - Parte 2: Service Layer e Busca por ID
+
+### 8. Criar Service Layer (Camada de Serviço)
+**Arquivo:** `service/SerieService.java`
+
+**O que faz:** Centraliza lógica de negócio e conversões
+
+**Por que criar Service?**
+
+**ANTES (Controller acessava Repository diretamente):**
+```java
+@RestController
+public class SerieController {
+    @Autowired
+    private SerieRepository repositorio;  // ❌ Alto acoplamento
+    
+    @GetMapping("/series")
+    public List<SerieDTO> obterSeries() {
+        // ❌ Lógica de conversão no Controller
+        return repositorio.findAll()
+                .stream()
+                .map(s -> new SerieDTO(...))
+                .collect(Collectors.toList());
+    }
+}
+```
+
+**Problemas:**
+- ❌ Controller conhece detalhes de conversão
+- ❌ Código duplicado em múltiplos endpoints
+- ❌ Difícil testar
+- ❌ Alto acoplamento
+
+**AGORA (Controller chama Service):**
+```java
+@RestController
+public class SerieController {
+    @Autowired
+    private SerieService servico;  // ✅ Baixo acoplamento
+    
+    @GetMapping("/series")
+    public List<SerieDTO> obterSeries() {
+        return servico.obterTodasAsSeries();  // ✅ Simples e limpo
+    }
+}
+```
+
+**Service (SerieService.java):**
+```java
+@Service
+public class SerieService {
+    @Autowired
+    private SerieRepository repository;
+    
+    public List<SerieDTO> obterTodasAsSeries() {
+        return converteDados(repository.findAll());
+    }
+    
+    public List<SerieDTO> obterTop5Series() {
+        return converteDados(repository.findTop5ByOrderByAvaliacaoDesc());
+    }
+    
+    public List<SerieDTO> obterLancamentos() {
+        return converteDados(repository.encontrarEpisodiosMaisRecentes());
+    }
+    
+    // Método privado para evitar duplicação (DRY)
+    private List<SerieDTO> converteDados(List<Serie> series) {
+        return series.stream()
+                .map(s -> new SerieDTO(
+                        s.getId(),
+                        s.getTitulo(),
+                        s.getTotalTemporadas(),
+                        s.getAvaliacao(),
+                        s.getGenero(),
+                        s.getAtores(),
+                        s.getPoster(),
+                        s.getSinopse()
+                ))
+                .collect(Collectors.toList());
+    }
+}
+```
+
+**Vantagens:**
+- ✅ **Baixo acoplamento:** Controller não conhece Repository
+- ✅ **Alta coesão:** Cada classe tem uma responsabilidade
+- ✅ **DRY:** Método converteDados() reutilizado
+- ✅ **Testabilidade:** Fácil criar mocks
+- ✅ **Manutenibilidade:** Mudanças centralizadas
+
+**Conceitos aprendidos:**
+- Service layer
+- Separação de responsabilidades
+- Princípio DRY (Don't Repeat Yourself)
+- Baixo acoplamento, alta coesão
+- Injeção de dependência em camadas
+
+---
+
+### 9. Buscar Série por ID
+**Arquivos:** `controller/SerieController.java`, `service/SerieService.java`
+
+**O que faz:** Retorna UMA série específica pelo ID
+
+**Passos:**
+
+1. **Adicionar endpoint no Controller:**
+```java
+@RestController
+public class SerieController {
+    @Autowired
+    private SerieService servico;
+    
+    /**
+     * Endpoint GET /series/{id}
+     * 
+     * @PathVariable: Captura variável da URL
+     * - URL: /series/1 → id = 1
+     * - URL: /series/42 → id = 42
+     * 
+     * Exemplo: http://localhost:8080/series/1
+     */
+    @GetMapping("/series/{id}")
+    public SerieDTO obterPorId(@PathVariable Long id) {
+        return servico.obterPorId(id);
+    }
+}
+```
+
+2. **Adicionar método no Service:**
+```java
+@Service
+public class SerieService {
+    @Autowired
+    private SerieRepository repository;
+    
+    /**
+     * Busca série por ID
+     * 
+     * Optional<Serie>:
+     * - findById() retorna Optional (pode não existir)
+     * - isPresent(): Verifica se encontrou
+     * - get(): Extrai objeto do Optional
+     * 
+     * Retorna null se não encontrar
+     * Alternativa: throw new RuntimeException("Série não encontrada")
+     */
+    public SerieDTO obterPorId(Long id) {
+        Optional<Serie> serie = repository.findById(id);
+        
+        if (serie.isPresent()) {
+            Serie s = serie.get();
+            return new SerieDTO(
+                    s.getId(),
+                    s.getTitulo(),
+                    s.getTotalTemporadas(),
+                    s.getAvaliacao(),
+                    s.getGenero(),
+                    s.getAtores(),
+                    s.getPoster(),
+                    s.getSinopse()
+            );
+        }
+        return null;
+    }
+}
+```
+
+**Anotações:**
+- `@PathVariable` - Captura variável do caminho da URL
+- `{id}` - Placeholder na rota
+- `Long id` - Parâmetro do método
+
+**Fluxo de requisição:**
+```
+1. Cliente: GET http://localhost:8080/series/1
+   ↓
+2. Spring identifica @GetMapping("/series/{id}")
+   ↓
+3. Spring extrai id = 1 da URL
+   ↓
+4. Spring chama obterPorId(1L)
+   ↓
+5. Controller chama servico.obterPorId(1L)
+   ↓
+6. Service chama repository.findById(1L)
+   ↓
+7. Repository executa: SELECT * FROM series WHERE id = 1
+   ↓
+8. Service converte Serie → SerieDTO
+   ↓
+9. Controller retorna JSON
+   ↓
+10. Cliente recebe: {"id":1,"titulo":"Breaking Bad",...}
+```
+
+**Conceitos aprendidos:**
+- @PathVariable para capturar ID
+- Optional<T> para tratar resultado vazio
+- isPresent() e get()
+- Busca por chave primária
+- Tratamento de null
+
+---
+
+### 10. Adicionar Prefixo de Rota com @RequestMapping
+**Arquivo:** `controller/SerieController.java`
+
+**O que faz:** Define prefixo comum para todas as rotas do controller
+
+**ANTES (sem @RequestMapping):**
+```java
+@RestController
+public class SerieController {
+    @GetMapping("/series")           // http://localhost:8080/series
+    @GetMapping("/series/top5")      // http://localhost:8080/series/top5
+    @GetMapping("/series/lancamentos") // http://localhost:8080/series/lancamentos
+    @GetMapping("/series/{id}")      // http://localhost:8080/series/{id}
+}
+```
+
+**Problema:** Repetição de "/series" em todas as rotas
+
+**AGORA (com @RequestMapping):**
+```java
+@RestController
+@RequestMapping("/series")  // Prefixo comum
+public class SerieController {
+    @GetMapping                // http://localhost:8080/series
+    @GetMapping("/top5")       // http://localhost:8080/series/top5
+    @GetMapping("/lancamentos") // http://localhost:8080/series/lancamentos
+    @GetMapping("/{id}")       // http://localhost:8080/series/{id}
+}
+```
+
+**Vantagens:**
+- ✅ Código mais limpo (DRY)
+- ✅ Fácil mudar prefixo (um lugar só)
+- ✅ Organização por recurso
+- ✅ Padrão REST
+
+**Conceitos aprendidos:**
+- @RequestMapping para prefixo
+- Organização de rotas
+- Padrão REST (recursos)
+- DRY em rotas
+
+---
+
+## 🧪 Testando Todos os Endpoints
+
+### Endpoints Disponíveis
+
+| Endpoint | Método | Retorno | Descrição |
+|----------|--------|---------|-----------|
+| `/series` | GET | List<SerieDTO> | Todas as séries |
+| `/series/top5` | GET | List<SerieDTO> | Top 5 avaliações |
+| `/series/lancamentos` | GET | List<SerieDTO> | 5 lançamentos recentes |
+| `/series/{id}` | GET | SerieDTO | Série específica |
+
+### Teste 1: Todas as séries
+```
+GET http://localhost:8080/series
+```
+**Resposta:**
+```json
+[
+  {"id":1,"titulo":"Breaking Bad","totalTemporadas":5,...},
+  {"id":2,"titulo":"The Boys","totalTemporadas":4,...}
+]
+```
+
+### Teste 2: Top 5 séries
+```
+GET http://localhost:8080/series/top5
+```
+**Resposta:**
+```json
+[
+  {"id":1,"titulo":"Breaking Bad","avaliacao":9.5,...},
+  {"id":3,"titulo":"Friends","avaliacao":8.9,...}
+]
+```
+
+### Teste 3: Lançamentos recentes
+```
+GET http://localhost:8080/series/lancamentos
+```
+**Resposta:**
+```json
+[
+  {"id":2,"titulo":"The Boys","totalTemporadas":4,...}
+]
+```
+
+### Teste 4: Série por ID
+```
+GET http://localhost:8080/series/1
+```
+**Resposta:**
+```json
+{
+  "id": 1,
+  "titulo": "Breaking Bad",
+  "totalTemporadas": 5,
+  "avaliacao": 9.5,
+  "genero": "DRAMA",
+  "atores": "Bryan Cranston, Aaron Paul",
+  "poster": "https://...",
+  "sinopse": "Um professor..."
+}
+```
+
+### Teste 5: ID inexistente
+```
+GET http://localhost:8080/series/999
+```
+**Resposta:**
+```
+null
+```
+**Status:** 200 OK (poderia ser 404 Not Found com tratamento de erro)
+
+---
+
+## 📊 Arquitetura Final (Aula 04 Completa)
+
+```
+┌─────────────────────────────────────────────┐
+│  CLIENTE (Navegador/Postman)                │
+│  GET http://localhost:8080/series/1         │
+└─────────────────┬───────────────────────────┘
+                  │ HTTP Request
+                  ↓
+┌─────────────────────────────────────────────┐
+│  CONTROLLER (SerieController)               │
+│  @RestController                            │
+│  @RequestMapping("/series")                 │
+│  @GetMapping("/{id}")                       │
+│  - Recebe requisições HTTP                  │
+│  - Chama Service (NÃO Repository!)          │
+│  - Retorna JSON                             │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│  SERVICE (SerieService)                     │
+│  @Service                                   │
+│  - Lógica de negócio                        │
+│  - Conversão Serie → SerieDTO               │
+│  - Método privado converteDados() (DRY)     │
+│  - Chama Repository                         │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│  REPOSITORY (SerieRepository)               │
+│  extends JpaRepository<Serie, Long>         │
+│  - findById(id)                             │
+│  - findAll()                                │
+│  - findTop5ByOrderByAvaliacaoDesc()         │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│  MODEL (Serie, Episodio)                    │
+│  @Entity                                    │
+│  - Entidades JPA                            │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓
+┌─────────────────────────────────────────────┐
+│  DATABASE (PostgreSQL)                      │
+│  - Tabela: series                           │
+│  - SELECT * FROM series WHERE id = 1        │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓ (conversão)
+┌─────────────────────────────────────────────┐
+│  DTO (SerieDTO)                             │
+│  - Dados expostos na API (SEM episódios)    │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ↓ JSON
+┌─────────────────────────────────────────────┐
+│  CLIENTE recebe JSON                        │
+│  {"id":1,"titulo":"Breaking Bad",...}       │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 📝 Resumo da Aula 04 - Completa
+
+### ✅ O que você aprendeu:
+
+1. **Service Layer**
+   - Camada de serviço para lógica de negócio
+   - Separação Controller → Service → Repository
+   - Baixo acoplamento, alta coesão
+   - Injeção de dependência em camadas
+
+2. **Princípio DRY**
+   - Método privado converteDados()
+   - Reutilização de código
+   - Evitar duplicação
+
+3. **Busca por ID**
+   - @PathVariable para capturar ID da URL
+   - Optional<T> para tratar resultado vazio
+   - isPresent() e get()
+   - Tratamento de null
+
+4. **@RequestMapping**
+   - Prefixo comum para rotas
+   - Organização por recurso
+   - Padrão REST
+   - DRY em rotas
+
+5. **Arquitetura Completa**
+   - Controller: HTTP
+   - Service: Lógica de negócio
+   - Repository: Banco de dados
+   - Model: Entidades
+   - DTO: Transferência de dados
+
+---
+
+**Desenvolvido por:** Guilherme Falcão  
+**Curso:** Alura - Formação Avançando com Java  
+**Última atualização:** Aula 04 - Parte 2 (Service Layer + Busca por ID)

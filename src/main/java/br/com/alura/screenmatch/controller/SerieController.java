@@ -1,74 +1,82 @@
 package br.com.alura.screenmatch.controller;
 
 import br.com.alura.screenmatch.dto.SerieDTO;
-import br.com.alura.screenmatch.repository.SerieRepository;
+import br.com.alura.screenmatch.service.SerieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * CONTROLLER REST - Camada de Apresentação
  * 
- * Esta classe é responsável por receber requisições HTTP e retornar respostas.
- * É a "porta de entrada" da aplicação web.
+ * RESPONSABILIDADE DO CONTROLLER:
+ * - Receber requisições HTTP
+ * - Validar dados de entrada
+ * - Chamar Service (NÃO Repository diretamente!)
+ * - Retornar resposta HTTP
+ * 
+ * ARQUITETURA EM CAMADAS (MVC):
+ * 
+ * Cliente (Navegador/Postman)
+ *    ↓ HTTP Request
+ * Controller (SerieController) ← VOCÊ ESTÁ AQUI
+ *    ↓ Chama
+ * Service (SerieService) ← Lógica de negócio
+ *    ↓ Chama
+ * Repository (SerieRepository) ← Acesso ao banco
+ *    ↓ SQL
+ * Database (PostgreSQL)
+ * 
+ * BAIXO ACOPLAMENTO:
+ * - Controller NÃO conhece Repository
+ * - Controller só conhece Service
+ * - Se mudar Repository, Controller não muda
+ * - Fácil trocar implementação
+ * 
+ * ALTA COESÃO:
+ * - Controller: Apenas HTTP (receber/retornar)
+ * - Service: Apenas lógica de negócio
+ * - Repository: Apenas banco de dados
+ * - Cada classe tem UMA responsabilidade
+ * 
+ * ANTES (ERRADO - Alto Acoplamento):
+ * Controller → Repository (direto)
+ * - Controller conhece detalhes do banco
+ * - Difícil testar
+ * - Difícil trocar implementação
+ * 
+ * AGORA (CORRETO - Baixo Acoplamento):
+ * Controller → Service → Repository
+ * - Controller só conhece Service
+ * - Fácil testar (mock do Service)
+ * - Fácil trocar implementação
  * 
  * ANOTAÇÕES:
- * - @RestController: Combina @Controller + @ResponseBody
- *   - Indica que esta classe é um controller REST
- *   - Retorna dados diretamente (JSON/texto), não páginas HTML
- *   - Spring converte automaticamente objetos Java para JSON
- * 
- * - @GetMapping: Define um endpoint HTTP GET
- *   - Mapeia uma URL para um método Java
- *   - Exemplo: GET http://localhost:8080/series
- * 
- * - @Autowired: Injeção de dependência
- *   - Spring cria e injeta automaticamente o SerieRepository
- *   - Não precisa fazer "new SerieRepository()"
- * 
- * FLUXO DE REQUISIÇÃO COM DTO:
- * 1. Cliente faz requisição: GET http://localhost:8080/series
- * 2. Spring identifica o @GetMapping("/series")
- * 3. Spring chama o método obterSeries()
- * 4. Método busca todas as séries no banco (repositorio.findAll())
- * 5. Converte cada Serie (entidade) para SerieDTO usando stream().map()
- * 6. Spring converte List<SerieDTO> para JSON automaticamente
- * 7. Cliente recebe resposta HTTP 200 com JSON (SEM episódios)
- * 
- * POR QUE USAR DTO?
- * - Evita expor relacionamentos complexos (episódios)
- * - Evita loop infinito de serialização JSON
- * - Controla exatamente quais dados são expostos
- * - Melhora performance (não carrega episódios)
- * - Desacopla API da estrutura do banco
- * 
- * EXEMPLO DE RESPOSTA JSON:
- * [
- *   {
- *     "id": 1,
- *     "titulo": "Breaking Bad",
- *     "totalTemporadas": 5,
- *     "avaliacao": 9.5,
- *     "genero": "DRAMA",
- *     "atores": "Bryan Cranston, Aaron Paul",
- *     "poster": "https://...",
- *     "sinopse": "Um professor..."
- *   },
- *   { ... }
- * ]
- * 
- * NOTA: Episódios NÃO aparecem no JSON!
+ * - @RestController: Controller REST (retorna dados, não HTML)
+ * - @GetMapping: Mapeia requisição GET para método
+ * - @Autowired: Injeção de dependência do Service
  */
 @RestController
 public class SerieController {
 
     // @Autowired: Injeção de dependência do Spring
-    // Spring cria automaticamente uma instância de SerieRepository e injeta aqui
+    // Spring cria automaticamente uma instância de SerieService e injeta aqui
+    // Controller agora depende de SERVICE, NÃO de Repository!
     @Autowired
-    private SerieRepository repositorio;
+    private SerieService servico;
+
+    // REMOVIDO: Repository não fica mais no Controller!
+    // @Autowired
+    // private SerieRepository repositorio;  ← ERRADO! Alto acoplamento
+    //
+    // POR QUE REMOVER?
+    // - Controller não deve acessar banco diretamente
+    // - Viola princípio de Separação de Responsabilidades
+    // - Dificulta testes unitários
+    // - Repository agora está no Service (lugar correto)
 
     /**
      * Endpoint GET /inicio
@@ -76,42 +84,13 @@ public class SerieController {
      * Endpoint simples para TESTAR o DevTools (hot reload automático).
      * Retorna apenas uma mensagem de texto.
      * 
-     * OBJETIVO:
-     * - Testar se DevTools está funcionando
-     * - Verificar hot reload automático
-     * - Endpoint de boas-vindas da API
-     * 
-     * COMO TESTAR DEVTOOLS:
-     * 1. Inicie a aplicação: mvn spring-boot:run
-     * 2. Acesse: http://localhost:8080/inicio
-     * 3. Veja a mensagem: "Bem-vindo ao Screenmatch!"
-     * 4. Altere a mensagem abaixo (ex: "Bem-vindo ao teste do DevTools!")
-     * 5. Salve o arquivo (Ctrl+S)
-     * 6. Aguarde 2-5 segundos (DevTools reinicia automaticamente)
-     * 7. Atualize o navegador (F5)
-     * 8. Veja a nova mensagem!
-     * 
-     * SE FUNCIONOU:
-     * ✅ DevTools está configurado corretamente
-     * ✅ Hot reload automático está ativo
-     * ✅ Não precisa parar/iniciar aplicação manualmente
-     * 
      * @return Mensagem de boas-vindas (texto simples)
      * 
-     * TESTES:
-     * - Navegador: http://localhost:8080/inicio
-     * - Postman: GET http://localhost:8080/inicio
-     * - cURL: curl http://localhost:8080/inicio
-     * 
-     * RESPOSTA:
-     * - HTTP 200 OK
-     * - Content-Type: text/plain
-     * - Body: "Bem-vindo ao Screenmatch!"
+     * TESTE:
+     * http://localhost:8080/inicio
      */
     @GetMapping("/inicio")
     public String inicio() {
-        // Retorna mensagem simples de texto
-        // Altere esta mensagem para testar o DevTools!
         return "Bem-vindo ao Screenmatch!";
     }
 
@@ -121,50 +100,127 @@ public class SerieController {
      * Retorna todas as séries cadastradas no banco de dados em formato JSON.
      * Usa DTO para expor apenas dados necessários (SEM episódios).
      * 
+     * FLUXO:
+     * 1. Controller recebe requisição HTTP
+     * 2. Controller chama Service: servico.obterTodasAsSeries()
+     * 3. Service busca no Repository: repository.findAll()
+     * 4. Service converte Serie → SerieDTO
+     * 5. Service retorna List<SerieDTO>
+     * 6. Controller retorna JSON para cliente
+     * 
+     * BAIXO ACOPLAMENTO:
+     * - Controller NÃO conhece Repository
+     * - Controller NÃO conhece detalhes de conversão
+     * - Controller apenas chama Service e retorna resultado
+     * 
      * @return Lista de SerieDTO (convertida automaticamente para JSON)
      * 
-     * TESTES:
-     * - Navegador: http://localhost:8080/series
-     * - Postman: GET http://localhost:8080/series
-     * - cURL: curl http://localhost:8080/series
+     * TESTE:
+     * http://localhost:8080/series
      * 
      * RESPOSTA:
-     * - HTTP 200 OK
-     * - Content-Type: application/json
-     * - Body: [{"id":1,"titulo":"Breaking Bad",...}, {...}]
-     * - SEM campo "episodios" (controlado pelo DTO)
-     * 
-     * CONVERSÃO Serie → SerieDTO:
-     * 1. repositorio.findAll() → List<Serie> (entidades do banco)
-     * 2. .stream() → Stream<Serie> (para processar cada elemento)
-     * 3. .map(s -> new SerieDTO(...)) → Stream<SerieDTO> (converte cada Serie em SerieDTO)
-     * 4. .collect(Collectors.toList()) → List<SerieDTO> (coleta em lista)
-     * 5. Spring converte List<SerieDTO> para JSON
+     * [{"id":1,"titulo":"Breaking Bad",...}]
      */
     @GetMapping("/series")
     public List<SerieDTO> obterSeries() {
-        // 1. Busca todas as séries do banco (List<Serie>)
-        // 2. Converte cada Serie para SerieDTO usando stream + map
-        // 3. Coleta resultado em List<SerieDTO>
-        return repositorio.findAll()
-                .stream()
-                .map(s -> new SerieDTO(
-                        s.getId(),              // Long id
-                        s.getTitulo(),          // String titulo
-                        s.getTotalTemporadas(), // Integer totalTemporadas
-                        s.getAvaliacao(),       // Double avaliacao
-                        s.getGenero(),          // Categoria genero
-                        s.getAtores(),          // String atores
-                        s.getPoster(),          // String poster
-                        s.getSinopse()          // String sinopse
-                ))
-                .collect(Collectors.toList());
-        
-        // NOTA: Episódios NÃO são incluídos no DTO!
-        // Isso evita:
-        // - Loop infinito de serialização
-        // - Carregar dados desnecessários
-        // - Expor estrutura interna do banco
+        // Controller apenas chama Service e retorna resultado
+        // Toda lógica de negócio está no Service
+        return servico.obterTodasAsSeries();
+    }
+
+    /**
+     * Endpoint GET /series/top5
+     * 
+     * Retorna as 5 séries com melhor avaliação em ordem decrescente.
+     * 
+     * @return Lista com 5 SerieDTO (melhores avaliações)
+     * 
+     * TESTE:
+     * http://localhost:8080/series/top5
+     */
+    @GetMapping("/series/top5")
+    public List<SerieDTO> obterTop5Series() {
+        return servico.obterTop5Series();
+    }
+
+    /**
+     * Endpoint GET /series/lancamentos
+     * 
+     * Retorna as 5 séries com lançamentos mais recentes.
+     * Ordena pelas datas de lançamento dos episódios (mais recente primeiro).
+     * 
+     * FLUXO:
+     * 1. Controller recebe requisição HTTP
+     * 2. Controller chama Service: servico.obterLancamentos()
+     * 3. Service busca no Repository: repository.findTop5ByOrderByEpisodiosDataLancamentoDesc()
+     * 4. Repository faz JOIN com episodios e ordena por data_lancamento DESC
+     * 5. Service converte Serie → SerieDTO
+     * 6. Controller retorna JSON para cliente
+     * 
+     * DERIVED QUERY METHOD:
+     * - findTop5: Limita a 5 registros
+     * - ByOrderBy: Ordenação
+     * - Episodios: Navega para relacionamento @OneToMany (Serie.episodios)
+     * - DataLancamento: Campo do Episodio
+     * - Desc: Ordem decrescente (mais recente primeiro)
+     * 
+     * SQL GERADO:
+     * SELECT DISTINCT s.* FROM series s
+     * JOIN episodios e ON s.id = e.serie_id
+     * ORDER BY e.data_lancamento DESC
+     * LIMIT 5
+     * 
+     * USO:
+     * - Mostrar "Novidades" ou "Lançamentos Recentes" na API
+     * - Séries que tiveram episódios lançados recentemente
+     * 
+     * @return Lista com 5 SerieDTO (lançamentos mais recentes)
+     * 
+     * TESTE:
+     * http://localhost:8080/series/lancamentos
+     * 
+     * RESPOSTA:
+     * [
+     *   {"id":1,"titulo":"The Boys","totalTemporadas":4,...},
+     *   {"id":2,"titulo":"Breaking Bad","totalTemporadas":5,...},
+     *   ...
+     * ]
+     */
+    @GetMapping("/series/lancamentos")
+    public List<SerieDTO> obterLancamentos() {
+        return servico.obterLancamentos();
+    }
+
+    /**
+     * Endpoint GET /series/{id}
+     * 
+     * Retorna UMA série específica pelo ID.
+     * 
+     * @PathVariable: Indica que o parâmetro vem do caminho da URL
+     * - URL: /series/1 → id = 1
+     * - URL: /series/42 → id = 42
+     * 
+     * FLUXO:
+     * 1. Cliente: GET http://localhost:8080/series/1
+     * 2. Controller recebe id = 1 via @PathVariable
+     * 3. Controller chama Service: servico.obterPorId(1)
+     * 4. Service busca no Repository: repository.findById(1)
+     * 5. Service converte Serie → SerieDTO
+     * 6. Controller retorna JSON para cliente
+     * 
+     * @param id ID da série (vem da URL)
+     * @return SerieDTO ou null se não encontrar
+     * 
+     * TESTE:
+     * http://localhost:8080/series/1
+     * 
+     * RESPOSTA:
+     * {"id":1,"titulo":"Breaking Bad","totalTemporadas":5,...}
+     */
+    @GetMapping("/series/{id}")
+    public SerieDTO obterPorId(@PathVariable Long id) {
+        // @PathVariable: Extrai o {id} da URL e passa como parâmetro
+        return servico.obterPorId(id);
     }
 
 }

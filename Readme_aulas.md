@@ -3566,3 +3566,216 @@ null
 **Desenvolvido por:** Guilherme Falcão  
 **Curso:** Alura - Formação Avançando com Java  
 **Última atualização:** Aula 04 - Parte 2 (Service Layer + Busca por ID)
+
+
+## 🌐 AULA 04 - Parte 3: Endpoints de Episódios
+
+### 11. Criar DTO para Episódio
+**Arquivo:** `dto/EpisodioDTO.java`
+
+**O que faz:** DTO para expor apenas dados necessários dos episódios
+
+**Por que criar EpisodioDTO?**
+- ✅ Expõe apenas: temporada, numeroEpisodio, titulo
+- ✅ NÃO expõe: id, avaliacao, dataLancamento, serie (evita loop infinito)
+- ✅ JSON menor e mais rápido
+- ✅ Desacoplamento da entidade
+
+**Código:**
+```java
+public record EpisodioDTO(
+        Integer temporada,
+        Integer numeroEpisodio,
+        String titulo
+) {}
+```
+
+**Conceitos aprendidos:**
+- Records para DTOs
+- Controle de dados expostos
+- Evitar loop infinito de serialização
+
+---
+
+### 12. Endpoint: Todos os Episódios
+**Arquivos:** `controller/SerieController.java`, `service/SerieService.java`
+
+**O que faz:** Retorna TODOS os episódios de TODAS as temporadas de uma série
+
+**Endpoint:**
+```java
+@GetMapping("/series/{id}/temporadas/todas")
+public List<EpisodioDTO> obterTodasTemporadas(@PathVariable Long id) {
+    return servico.obterTodasTemporadas(id);
+}
+```
+
+**Service:**
+```java
+public List<EpisodioDTO> obterTodasTemporadas(Long id) {
+    Optional<Serie> serie = repository.findById(id);
+    
+    if (serie.isPresent()) {
+        Serie s = serie.get();
+        return s.getEpisodios().stream()
+                .map(e -> new EpisodioDTO(
+                        e.getTemporada(),
+                        e.getNumeroEpisodio(),
+                        e.getTitulo()
+                ))
+                .collect(Collectors.toList());
+    }
+    return null;
+}
+```
+
+**SQL gerado:**
+```sql
+SELECT * FROM series WHERE id = ?
+SELECT * FROM episodios WHERE serie_id = ?
+```
+
+**Teste:**
+```
+http://localhost:8080/series/7/temporadas/todas (Breaking Bad)
+http://localhost:8080/series/1/temporadas/todas (The Boys)
+```
+
+**Resposta:**
+```json
+[
+  {"temporada":1,"numeroEpisodio":1,"titulo":"Pilot"},
+  {"temporada":1,"numeroEpisodio":2,"titulo":"Cat's in the Bag..."},
+  {"temporada":2,"numeroEpisodio":1,"titulo":"Seven Thirty-Seven"},
+  ...
+]
+```
+
+**Conceitos aprendidos:**
+- Endpoint com @PathVariable
+- Conversão Episodio → EpisodioDTO
+- Stream API para transformação
+- Retorno de lista de DTOs
+
+---
+
+### 13. Endpoint: Episódios por Temporada
+**Arquivos:** `controller/SerieController.java`, `service/SerieService.java`, `repository/SerieRepository.java`
+
+**O que faz:** Retorna episódios de UMA temporada específica
+
+**Endpoint (múltiplos @PathVariable):**
+```java
+@GetMapping("/series/{id}/temporadas/{numero}")
+public List<EpisodioDTO> obterTemporadaPorNumero(
+        @PathVariable Long id, 
+        @PathVariable Long numero) {
+    return servico.obterTemporadasPorNumero(id, numero);
+}
+```
+
+**Service:**
+```java
+public List<EpisodioDTO> obterTemporadasPorNumero(Long id, Long numero) {
+    return repository.obterEpisodiosPorTemporada(id, numero)
+            .stream()
+            .map(e -> new EpisodioDTO(
+                    e.getTemporada(),
+                    e.getNumeroEpisodio(),
+                    e.getTitulo()
+            ))
+            .collect(Collectors.toList());
+}
+```
+
+**Repository (JPQL com JOIN e WHERE):**
+```java
+@Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s.id = :id AND e.temporada = :numero")
+List<Episodio> obterEpisodiosPorTemporada(@Param("id") Long id, @Param("numero") Long numero);
+```
+
+**SQL gerado:**
+```sql
+SELECT e.* FROM series s
+JOIN episodios e ON s.id = e.serie_id
+WHERE s.id = ? AND e.temporada = ?
+```
+
+**Por que usar JPQL?**
+- ✅ Busca direta no banco (mais rápido)
+- ✅ Filtra por série E temporada em uma única query
+- ✅ Não carrega todos os episódios da série
+- ✅ Retorna apenas episódios da temporada solicitada
+
+**Teste:**
+```
+http://localhost:8080/series/7/temporadas/1 (Breaking Bad, temporada 1)
+http://localhost:8080/series/1/temporadas/2 (The Boys, temporada 2)
+http://localhost:8080/series/8/temporadas/3 (Game of Thrones, temporada 3)
+```
+
+**Resposta:**
+```json
+[
+  {"temporada":1,"numeroEpisodio":1,"titulo":"Pilot"},
+  {"temporada":1,"numeroEpisodio":2,"titulo":"Cat's in the Bag..."},
+  {"temporada":1,"numeroEpisodio":3,"titulo":"...And the Bag's in the River"}
+]
+```
+
+**Conceitos aprendidos:**
+- Múltiplos @PathVariable em um endpoint
+- JPQL com JOIN e WHERE
+- Filtro por múltiplos critérios (série + temporada)
+- Otimização de queries (busca apenas o necessário)
+
+---
+
+## 📊 Endpoints Completos da API
+
+| Endpoint | Método | Retorno | Descrição |
+|----------|--------|---------|-----------|
+| `/series` | GET | List<SerieDTO> | Todas as séries |
+| `/series/top5` | GET | List<SerieDTO> | Top 5 avaliações |
+| `/series/lancamentos` | GET | List<SerieDTO> | 5 lançamentos recentes |
+| `/series/{id}` | GET | SerieDTO | Série específica |
+| `/series/{id}/temporadas/todas` | GET | List<EpisodioDTO> | Todos os episódios |
+| `/series/{id}/temporadas/{numero}` | GET | List<EpisodioDTO> | Episódios da temporada |
+
+---
+
+## 📝 Resumo da Aula 04 - Completa
+
+### ✅ O que você aprendeu:
+
+1. **DTOs para Episódios**
+   - EpisodioDTO com apenas 3 campos
+   - Controle de dados expostos
+   - Evitar loop infinito
+
+2. **Endpoint com @PathVariable simples**
+   - /series/{id}/temporadas/todas
+   - Captura ID da URL
+   - Retorna todos os episódios
+
+3. **Endpoint com múltiplos @PathVariable**
+   - /series/{id}/temporadas/{numero}
+   - Captura ID e número da temporada
+   - Retorna episódios filtrados
+
+4. **JPQL com JOIN e WHERE**
+   - Filtro por série E temporada
+   - Query otimizada
+   - Busca apenas o necessário
+
+5. **Arquitetura completa**
+   - Controller: Recebe requisições HTTP
+   - Service: Lógica de negócio e conversões
+   - Repository: Queries JPQL
+   - DTO: Transferência de dados
+
+---
+
+**Desenvolvido por:** Guilherme Falcão  
+**Curso:** Alura - Formação Avançando com Java  
+**Última atualização:** Aula 04 - Parte 3 (Endpoints de Episódios)

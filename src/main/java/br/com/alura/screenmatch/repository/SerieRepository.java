@@ -403,4 +403,49 @@ public interface SerieRepository extends JpaRepository<Serie, Long> {
             "ORDER BY MAX(e.dataLancamento) DESC LIMIT 5")
     List<Serie> encontrarEpisodiosMaisRecentes();
 
+    /**
+     * Busca episódios de uma temporada específica de uma série
+     * Usa JPQL com JOIN e WHERE para filtrar por série E temporada
+     * 
+     * JPQL SYNTAX:
+     * - SELECT e: Seleciona apenas os episódios (entidade Episodio)
+     * - FROM Serie s: Começa pela entidade Serie (alias 's')
+     * - JOIN s.episodios e: Faz JOIN com a lista de episódios (alias 'e')
+     *   - s.episodios: Atributo da entidade Serie (relacionamento @OneToMany)
+     * - WHERE s.id = :id: Filtra por ID da série
+     * - AND e.temporada = :numero: Filtra por número da temporada
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM series s
+     * JOIN episodios e ON s.id = e.serie_id
+     * WHERE s.id = ? AND e.temporada = ?
+     * 
+     * POR QUE USAR JPQL?
+     * - Busca direta no banco (mais rápido)
+     * - Filtra por série E temporada em uma única query
+     * - Não carrega todos os episódios da série
+     * - Retorna apenas episódios da temporada solicitada
+     * 
+     * ALTERNATIVA (menos eficiente):
+     * - Buscar série completa: findById(id)
+     * - Filtrar episódios em memória: serie.getEpisodios().stream().filter(...)
+     * - Problema: Carrega TODOS os episódios da série
+     * 
+     * @param id ID da série
+     * @param numero Número da temporada (1, 2, 3...)
+     * @return Lista de episódios da temporada
+     * 
+     * Exemplos de uso:
+     * - obterEpisodiosPorTemporada(7, 1) → Episódios da temporada 1 de Breaking Bad
+     * - obterEpisodiosPorTemporada(1, 2) → Episódios da temporada 2 de The Boys
+     * 
+     * VANTAGENS:
+     * ✅ Query otimizada (busca apenas o necessário)
+     * ✅ Não carrega episódios de outras temporadas
+     * ✅ Mais rápido que filtrar em memória
+     * ✅ Menos uso de memória
+     */
+    @Query("SELECT e FROM Serie s JOIN s.episodios e WHERE s.id = :id AND e.temporada = :numero")
+    List<Episodio> obterEpisodiosPorTemporada(@Param("id") Long id, @Param("numero") Long numero);
+
 }

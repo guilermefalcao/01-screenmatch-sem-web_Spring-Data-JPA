@@ -24,10 +24,13 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Servidor Tomcat embutido na porta 8080
 - ✅ Criação de Controllers REST (@RestController)
 - ✅ Endpoints GET com @GetMapping (/series, /series/{id}, /series/top5, /series/lancamentos)
-- ✅ @PathVariable para capturar ID da URL
+- ✅ Endpoint para todos os episódios: /series/{id}/temporadas/todas
+- ✅ Endpoint para episódios por temporada: /series/{id}/temporadas/{numero}
+- ✅ @PathVariable para capturar parâmetros da URL (id, numero)
+- ✅ Múltiplos @PathVariable em um mesmo endpoint
 - ✅ @RequestMapping para prefixo de rotas
-- ✅ DTOs (Data Transfer Objects) - SerieDTO
-- ✅ Conversão Serie → SerieDTO com stream().map()
+- ✅ DTOs (Data Transfer Objects) - SerieDTO e EpisodioDTO
+- ✅ Conversão Serie → SerieDTO e Episodio → EpisodioDTO com stream().map()
 - ✅ @JsonIgnore para evitar loop infinito de serialização
 - ✅ CORS (Cross-Origin Resource Sharing) - CorsConfiguration
 - ✅ Autorização de origens (allowedOrigins)
@@ -36,6 +39,7 @@ Projeto desenvolvido no segundo curso da formação Avançando com Java da Alura
 - ✅ Service layer (SerieService) para lógica de negócio
 - ✅ Método privado converteDados() para evitar duplicação (DRY)
 - ✅ Busca por ID com Optional e tratamento de null
+- ✅ JPQL com JOIN e WHERE para filtrar episódios por temporada
 - ✅ Backup da versão console (ScreenmatchApplicationSemWeb)
 - ✅ Configuração de classe principal no pom.xml
 - ✅ Testes de endpoints via navegador e Postman
@@ -224,8 +228,8 @@ Para usar a versão console com menu interativo:
 - Arquitetura MVC (Model-View-Controller)
 - Controllers REST com @RestController
 - Mapeamento de rotas com @GetMapping e @RequestMapping
-- @PathVariable para capturar parâmetros da URL
-- DTOs (Data Transfer Objects) para serialização
+- @PathVariable para capturar parâmetros da URL (simples e múltiplos)
+- DTOs (Data Transfer Objects) - SerieDTO e EpisodioDTO
 - @JsonIgnore para evitar loop infinito
 - CORS (Cross-Origin Resource Sharing)
 - DevTools para hot reload automático
@@ -235,6 +239,8 @@ Para usar a versão console com menu interativo:
 - Service layer para lógica de negócio e conversões
 - Princípio DRY (Don't Repeat Yourself) com métodos privados
 - Busca por ID com Optional<T> e tratamento de null
+- JPQL com JOIN e WHERE para filtrar episódios por temporada
+- Endpoints para listar episódios (todas temporadas e por temporada)
 - Baixo acoplamento e alta coesão
 
 ### Aula 03:

@@ -7,7 +7,7 @@ import br.com.alura.screenmatch.repository.SerieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-// import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * BACKUP DA VERSÃO CONSOLE (SEM WEB)
@@ -42,7 +42,7 @@ import org.springframework.boot.SpringApplication;
  * - Console: Scripts, processamento batch, ferramentas CLI
  * - Web: APIs REST, aplicações web, microserviços
  */
-// @SpringBootApplication // COMENTADO para não conflitar com a versão WEB
+// @SpringBootApplication  // COMENTADO - Versão web ativa
 public class ScreenmatchApplicationSemWeb implements CommandLineRunner {
 	
 	// @Autowired: Injeção de dependência do Spring

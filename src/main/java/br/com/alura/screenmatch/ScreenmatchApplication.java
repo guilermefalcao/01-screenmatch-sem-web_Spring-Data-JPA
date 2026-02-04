@@ -32,7 +32,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * - GET http://localhost:8080/series/top5 -> Top 5 séries
  * - GET http://localhost:8080/series/1 -> Busca série por ID
  */
-@SpringBootApplication
+@SpringBootApplication  // DESCOMENTADO - Versão web ativa
 public class ScreenmatchApplication {
 
 	public static void main(String[] args) {

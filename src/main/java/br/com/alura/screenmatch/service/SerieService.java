@@ -1,5 +1,6 @@
 package br.com.alura.screenmatch.service;
 
+import br.com.alura.screenmatch.dto.EpisodioDTO;
 import br.com.alura.screenmatch.dto.SerieDTO;
 import br.com.alura.screenmatch.model.Serie;
 import br.com.alura.screenmatch.repository.SerieRepository;
@@ -190,6 +191,101 @@ public class SerieService {
         // Se não encontrar, retorna null
         // Alternativa: throw new RuntimeException("Série não encontrada");
         return null;
+    }
+
+    /**
+     * Obtém todos os episódios de todas as temporadas de uma série
+     * 
+     * FLUXO:
+     * 1. Busca série no banco: repository.findById(id)
+     * 2. Verifica se existe: serie.isPresent()
+     * 3. Se existe: Extrai objeto com serie.get()
+     * 4. Pega lista de episódios: s.getEpisodios()
+     * 5. Converte cada Episodio → EpisodioDTO usando stream
+     * 6. Retorna List<EpisodioDTO>
+     * 7. Se NÃO existe: Retorna null
+     * 
+     * SQL GERADO:
+     * SELECT * FROM series WHERE id = ?
+     * SELECT * FROM episodios WHERE serie_id = ?
+     * 
+     * POR QUE USAR DTO?
+     * - Expõe apenas: temporada, numeroEpisodio, titulo
+     * - NÃO expõe: id, avaliacao, dataLancamento, serie (evita loop infinito)
+     * - JSON menor e mais rápido
+     * 
+     * CONVERSÃO:
+     * Episodio (entidade) → EpisodioDTO (DTO)
+     * - e.getTemporada() → temporada
+     * - e.getNumeroEpisodio() → numeroEpisodio
+     * - e.getTitulo() → titulo
+     * 
+     * @param id ID da série
+     * @return Lista de EpisodioDTO ou null se série não existir
+     */
+    public List<EpisodioDTO> obterTodasTemporadas(Long id) {
+        // Busca série no banco
+        Optional<Serie> serie = repository.findById(id);
+        
+        // Verifica se a série existe
+        if (serie.isPresent()) {
+            // Extrai o objeto Serie do Optional
+            Serie s = serie.get();
+            
+            // Converte lista de Episodio → lista de EpisodioDTO
+            return s.getEpisodios().stream()
+                    .map(e -> new EpisodioDTO(
+                            e.getTemporada(),
+                            e.getNumeroEpisodio(),
+                            e.getTitulo()
+                    ))
+                    .collect(Collectors.toList());
+        }
+        
+        // Se não encontrar, retorna null
+        return null;
+    }
+
+    /**
+     * Obtém episódios de uma temporada específica de uma série
+     * 
+     * FLUXO:
+     * 1. Controller recebe id da série e número da temporada
+     * 2. Service chama Repository: repository.obterEpisodiosPorTemporada(id, numero)
+     * 3. Repository executa JPQL com JOIN e WHERE
+     * 4. Service converte Episodio → EpisodioDTO
+     * 5. Retorna List<EpisodioDTO>
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM series s
+     * JOIN episodios e ON s.id = e.serie_id
+     * WHERE s.id = ? AND e.temporada = ?
+     * 
+     * POR QUE USAR JPQL?
+     * - Busca direta no banco (mais rápido)
+     * - Filtra por série E temporada em uma única query
+     * - Não carrega todos os episódios da série
+     * 
+     * CONVERSÃO:
+     * Episodio (entidade) → EpisodioDTO (DTO)
+     * - e.getTemporada() → temporada
+     * - e.getNumeroEpisodio() → numeroEpisodio
+     * - e.getTitulo() → titulo
+     * 
+     * @param id ID da série
+     * @param numero Número da temporada (1, 2, 3...)
+     * @return Lista de EpisodioDTO da temporada
+     */
+    public List<EpisodioDTO> obterTemporadasPorNumero(Long id, Long numero) {
+        // Busca episódios da temporada específica no banco
+        return repository.obterEpisodiosPorTemporada(id, numero)
+                .stream()
+                .map(e -> new EpisodioDTO(
+                        e.getTemporada(),
+                        e.getNumeroEpisodio(),
+                        e.getTitulo()
+                ))
+                .collect(Collectors.toList());
     }
 
     /**

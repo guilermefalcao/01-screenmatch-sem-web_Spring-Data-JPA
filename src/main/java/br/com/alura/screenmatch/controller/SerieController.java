@@ -1,5 +1,6 @@
 package br.com.alura.screenmatch.controller;
 
+import br.com.alura.screenmatch.dto.EpisodioDTO;
 import br.com.alura.screenmatch.dto.SerieDTO;
 import br.com.alura.screenmatch.service.SerieService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -221,6 +222,110 @@ public class SerieController {
     public SerieDTO obterPorId(@PathVariable Long id) {
         // @PathVariable: Extrai o {id} da URL e passa como parâmetro
         return servico.obterPorId(id);
+    }
+
+    /**
+     * Endpoint GET /series/{id}/temporadas/todas
+     * 
+     * Retorna TODOS os episódios de TODAS as temporadas de uma série.
+     * 
+     * @PathVariable: Captura o ID da série da URL
+     * - URL: /series/1/temporadas/todas → id = 1
+     * - URL: /series/7/temporadas/todas → id = 7
+     * 
+     * FLUXO:
+     * 1. Cliente: GET http://localhost:8080/series/1/temporadas/todas
+     * 2. Controller recebe id = 1 via @PathVariable
+     * 3. Controller chama Service: servico.obterTodasTemporadas(1)
+     * 4. Service busca série no banco: repository.findById(1)
+     * 5. Service pega lista de episódios: serie.getEpisodios()
+     * 6. Service converte Episodio → EpisodioDTO (apenas temporada, numero, titulo)
+     * 7. Controller retorna JSON para cliente
+     * 
+     * POR QUE USAR EpisodioDTO?
+     * - Expõe apenas: temporada, numeroEpisodio, titulo
+     * - NÃO expõe: id, avaliacao, dataLancamento, serie (evita loop infinito)
+     * - JSON menor e mais rápido
+     * 
+     * SQL GERADO:
+     * SELECT * FROM series WHERE id = 1
+     * SELECT * FROM episodios WHERE serie_id = 1
+     * 
+     * @param id ID da série (vem da URL)
+     * @return Lista de EpisodioDTO ou null se série não existir
+     * 
+     * TESTE:
+     * http://localhost:8080/series/1/temporadas/todas
+     * http://localhost:8080/series/7/temporadas/todas (Breaking Bad)
+     * 
+     * RESPOSTA:
+     * [
+     *   {"temporada":1,"numeroEpisodio":1,"titulo":"Pilot"},
+     *   {"temporada":1,"numeroEpisodio":2,"titulo":"Cat's in the Bag..."},
+     *   {"temporada":2,"numeroEpisodio":1,"titulo":"Seven Thirty-Seven"},
+     *   ...
+     * ]
+     */
+    @GetMapping("/series/{id}/temporadas/todas")
+    public List<EpisodioDTO> obterTodasTemporadas(@PathVariable Long id) {
+        // @PathVariable: Extrai o {id} da URL e passa como parâmetro
+        return servico.obterTodasTemporadas(id);
+    }
+
+    /**
+     * Endpoint GET /series/{id}/temporadas/{numero}
+     * 
+     * Retorna episódios de UMA temporada específica de uma série.
+     * 
+     * @PathVariable: Captura DOIS parâmetros da URL
+     * - {id}: ID da série
+     * - {numero}: Número da temporada
+     * 
+     * EXEMPLOS DE URL:
+     * - /series/7/temporadas/1 → id = 7, numero = 1 (Breaking Bad, temporada 1)
+     * - /series/1/temporadas/2 → id = 1, numero = 2 (The Boys, temporada 2)
+     * 
+     * FLUXO:
+     * 1. Cliente: GET http://localhost:8080/series/7/temporadas/1
+     * 2. Controller recebe id = 7 e numero = 1 via @PathVariable
+     * 3. Controller chama Service: servico.obterTemporadasPorNumero(7, 1)
+     * 4. Service chama Repository: repository.obterEpisodiosPorTemporada(7, 1)
+     * 5. Repository executa JPQL: SELECT e FROM Serie s JOIN s.episodios e WHERE s.id = 7 AND e.temporada = 1
+     * 6. Service converte Episodio → EpisodioDTO
+     * 7. Controller retorna JSON para cliente
+     * 
+     * SQL GERADO:
+     * SELECT e.* FROM series s
+     * JOIN episodios e ON s.id = e.serie_id
+     * WHERE s.id = 7 AND e.temporada = 1
+     * 
+     * POR QUE USAR JPQL?
+     * - Busca direta no banco (mais rápido)
+     * - Filtra por série E temporada em uma única query
+     * - Não carrega todos os episódios da série
+     * - Retorna apenas episódios da temporada solicitada
+     * 
+     * @param id ID da série (vem da URL)
+     * @param numero Número da temporada (vem da URL)
+     * @return Lista de EpisodioDTO da temporada
+     * 
+     * TESTE:
+     * http://localhost:8080/series/7/temporadas/1 (Breaking Bad, temporada 1)
+     * http://localhost:8080/series/1/temporadas/2 (The Boys, temporada 2)
+     * http://localhost:8080/series/8/temporadas/3 (Game of Thrones, temporada 3)
+     * 
+     * RESPOSTA:
+     * [
+     *   {"temporada":1,"numeroEpisodio":1,"titulo":"Pilot"},
+     *   {"temporada":1,"numeroEpisodio":2,"titulo":"Cat's in the Bag..."},
+     *   {"temporada":1,"numeroEpisodio":3,"titulo":"...And the Bag's in the River"},
+     *   ...
+     * ]
+     */
+    @GetMapping("/series/{id}/temporadas/{numero}")
+    public List<EpisodioDTO> obterTemporadaPorNumero(@PathVariable Long id, @PathVariable Long numero) {
+        // @PathVariable: Extrai {id} e {numero} da URL e passa como parâmetros
+        return servico.obterTemporadasPorNumero(id, numero);
     }
 
 }
